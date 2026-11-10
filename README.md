@@ -99,7 +99,7 @@ Create these in viaSocket (https://viasocket.com). Flow 1 is required; the other
    - **`channel` is `slack`** → add **Slack → Send message**. Set *Channel/User* to `to` (the Slack `@name`, sent as a DM) and *Message* to:
 
      ```
-     {{if isReminder}}Reminder: {{end}}Hi {{receiverName}}, I delivered “{{what}}”. Did it help you?
+     Hi {{receiverName}}, I delivered “{{what}}”. Did it help you?
      Proof: {{proofUrl}}
 
      Helped a lot: {{lotUrl}}
@@ -110,7 +110,7 @@ Create these in viaSocket (https://viasocket.com). Flow 1 is required; the other
      ```
    - **`channel` is `email`** → add **Gmail → Send email**. *To* = `to`, *Subject* = `Did “{{what}}” help you?` and the same body as above.
 
-   Insert the fields with the viaSocket variable picker rather than typing the braces, since the exact syntax is whatever the editor inserts. If your plan has no "if" in text, keep two copies of the message and branch on `isReminder` with another condition.
+   Insert the fields with the viaSocket variable picker rather than typing the braces; the exact syntax is whatever the editor inserts. To label reminders, add a Condition on `isReminder` before the send step and use a message that starts with "Reminder:" on the true branch.
 4. **Respond 2xx.** The webhook trigger answers 2xx as soon as the flow accepts the payload. The app treats any 2xx as "sent", and anything else as a failure it shows on the item.
 5. Publish the flow.
 
