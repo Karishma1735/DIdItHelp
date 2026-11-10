@@ -6,8 +6,20 @@
   "scripts": {
     "build": "npm install --prefix client --include=dev && npm run build --prefix client",
     "start": "node server/index.js",
-    "dev:server": "npm run dev --prefix server",
+    "dev:server": "node --watch server/index.js",
     "dev:client": "npm run dev --prefix client"
   },
-  "engines": { "node": ">=22.5" }
+  "engines": {
+    "node": ">=22.5"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "express-async-errors": "^3.1.1",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2"
+  }
 }

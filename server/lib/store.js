@@ -4,7 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const { DatabaseSync } = require('node:sqlite');
 
-const file = process.env.DATABASE_PATH || path.join(__dirname, '..', 'data', 'did-it-help.db');
+// DATABASE_PATH wins; otherwise use DATA_DIR (the persistent folder hosts like Embarko provide).
+const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+const file = process.env.DATABASE_PATH || path.join(dataDir, 'did-it-help.db');
 if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
 const db = new DatabaseSync(file);
 db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');

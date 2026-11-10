@@ -1,0 +1,12 @@
+{
+  "$schema": "https://embarko.ai/schema/embarko.json",
+  "appId": "cmwakt2ly01x8gk676lyt00r2",
+  "schedules": [
+    {
+      "cron": "0 9 * * *",
+      "path": "/tasks/reminders",
+      "timezone": "Asia/Kolkata",
+      "name": "daily reminders"
+    }
+  ]
+}

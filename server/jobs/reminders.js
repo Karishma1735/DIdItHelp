@@ -1,7 +1,5 @@
-const cron = require('node-cron');
 const store = require('../lib/store');
 const { sendAsk } = require('../lib/viasocket');
-const dates = require('../lib/dates');
 
 const TWO_DAYS = 2 * 24 * 60 * 60 * 1000;
 
@@ -28,14 +26,4 @@ async function runReminders() {
   return { checked: due.length, sent, failed };
 }
 
-function startReminderJob() {
-  cron.schedule(
-    '0 9 * * *',
-    () => runReminders().then((r) => console.log('Reminder job:', r)).catch((e) => console.error('Reminder job failed', e)),
-    { timezone: dates.TZ }
-  );
-  // Catch up shortly after boot in case the host was asleep at 09:00.
-  setTimeout(() => runReminders().catch((e) => console.error('Reminder job failed', e)), 30000);
-}
-
-module.exports = { runReminders, startReminderJob };
+module.exports = { runReminders };

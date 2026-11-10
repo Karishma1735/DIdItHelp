@@ -8,11 +8,15 @@ const helmet = require('helmet');
 const cors = require('cors');
 const fs = require('fs');
 
-for (const key of ['JWT_SECRET']) {
-  if (!process.env[key]) {
-    console.error(`Missing required env var ${key}. See .env.example.`);
-    process.exit(1);
-  }
+// Hosted defaults: APP_URL from the app name, and a login-signing secret kept in the data folder
+// so the app can boot before any env vars are set. Set JWT_SECRET explicitly to override.
+if (!process.env.APP_URL && process.env.APP_NAME) process.env.APP_URL = `https://${process.env.APP_NAME}.embarko.app`;
+if (!process.env.JWT_SECRET) {
+  const dataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
+  const secretFile = path.join(dataDir, 'jwt-secret');
+  fs.mkdirSync(dataDir, { recursive: true });
+  if (!fs.existsSync(secretFile)) fs.writeFileSync(secretFile, require('crypto').randomBytes(48).toString('hex'), { mode: 0o600 });
+  process.env.JWT_SECRET = fs.readFileSync(secretFile, 'utf8').trim();
 }
 for (const key of ['APP_URL', 'VIASOCKET_ASK_WEBHOOK_URL', 'DIGEST_KEY']) {
   if (!process.env[key]) console.warn(`Warning: ${key} is not set.`);
@@ -25,6 +29,7 @@ app.use(cors({ origin: process.env.APP_URL || false }));
 app.use(express.json({ limit: '20kb' }));
 
 app.get('/healthz', (req, res) => res.json({ ok: true }));
+app.use('/tasks', require('./routes/tasks'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/answer', require('./routes/answers'));
 app.use('/api/share', require('./routes/share').owner);
@@ -46,6 +51,5 @@ app.use((err, req, res, next) => {
 });
 
 require('./lib/store'); // opens the SQLite database and creates the tables
-require('./jobs/reminders').startReminderJob();
 const port = process.env.PORT || 5000;
-app.listen(port, () => console.log(`Did it help? listening on ${port}`));
+app.listen(port, '0.0.0.0', () => console.log(`Did it help? listening on ${port}`));

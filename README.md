@@ -32,7 +32,7 @@ Requires Node 22.5+ (the database is Node's built-in SQLite, so there is nothing
 
 ```bash
 cp .env.example .env        # then fill it in
-npm install --prefix server
+npm install
 npm install --prefix client
 npm run dev:server          # API on http://localhost:5000
 npm run dev:client          # app on http://localhost:5173 (proxies /api to :5000)
@@ -52,13 +52,32 @@ For local use, `APP_URL=http://localhost:5173` makes the links in messages open 
 | `DIGEST_KEY` | Secret for `/api/today`, `/api/digest` and `/api/jobs/reminders` (`?key=...`) |
 | `APP_TIMEZONE` | Optional. Decides what "today" and the Monday–Sunday week mean (default `UTC`) |
 
-## Deploy on Render (one service)
+## Deploy on Embarko (one service)
+
+This is how the app is currently hosted. Embarko builds it from the repo folder and serves it at `https://<app-name>.embarko.app`.
+
+- `package.json` at the top has the server dependencies, a `build` script (builds the React client) and `npm start`.
+- The SQLite file lives under `DATA_DIR`, which Embarko keeps across redeploys. **There are no backups.**
+- No timer library: `embarko.json` schedules a daily call to `GET /tasks/reminders` (09:00 Asia/Kolkata), which checks `Authorization: Bearer $CRON_SECRET` and sends the reminders.
+- `APP_URL` defaults to `https://$APP_NAME.embarko.app`. The login-signing secret is created once and kept in `DATA_DIR`, so the app boots with no env vars at all.
+- Set these in the app's **App setup** page: `DIGEST_KEY`, `VIASOCKET_ASK_WEBHOOK_URL`, and optionally `APP_TIMEZONE` (default `UTC`).
+
+To deploy from a terminal (see https://embarko.ai/docs/quickstart.md):
+
+```bash
+tar -czf /tmp/app.tar.gz --exclude=node_modules --exclude=.git --exclude='.env*' --exclude=dist --exclude='*.db' --exclude='*.db-*' --exclude=server/data .
+curl -sS -X POST 'https://ship.embarko.ai/apps' --oauth2-bearer "$DEPLOY_TOKEN" -H 'X-App-Name: did-it-help' -H 'X-Agent-Name: you' -F 'source=@/tmp/app.tar.gz'
+```
+
+Keep `appId` in `embarko.json` so redeploys always reach the same app.
+
+## Alternative: deploy on Render (one service)
 
 Express serves the built React app, so everything runs as one web service. The data lives in one SQLite file, so the service **needs a persistent disk**; without one, every redeploy would wipe your plans and answers.
 
 1. Push this repo to GitHub.
 2. On Render choose **New → Blueprint** and pick the repo. It reads `render.yaml`, which creates a web service with a 1 GB disk mounted at `/var/data` (disks need a paid plan, such as Starter). Or create a **Web Service** by hand with:
-   - Build command: `npm install --prefix server && npm run build`
+   - Build command: `npm install && npm run build`
    - Start command: `npm start`
    - Health check path: `/healthz`
    - A disk mounted at `/var/data`, and the env var `DATABASE_PATH=/var/data/did-it-help.db`
@@ -157,11 +176,11 @@ If your host sleeps, add a flow on a daily schedule that calls `GET https://<APP
 
 ```
 client/   React + Vite + Tailwind (JavaScript)
-server/   Express + SQLite (node:sqlite)
+server/   Express + SQLite (node:sqlite); dependencies live in the root package.json
   lib/store.js     database schema and queries
   lib/scoring.js   all scoring logic
   lib/viasocket.js the only code that calls viaSocket
-  jobs/reminders.js daily reminder job (node-cron)
+  jobs/reminders.js reminder logic (run daily by the host's scheduler)
 ```
 
 ## Notes
