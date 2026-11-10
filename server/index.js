@@ -4,12 +4,11 @@ require('dotenv').config();
 
 require('express-async-errors');
 const express = require('express');
-const mongoose = require('mongoose');
 const helmet = require('helmet');
 const cors = require('cors');
 const fs = require('fs');
 
-for (const key of ['MONGODB_URI', 'JWT_SECRET']) {
+for (const key of ['JWT_SECRET']) {
   if (!process.env[key]) {
     console.error(`Missing required env var ${key}. See .env.example.`);
     process.exit(1);
@@ -46,15 +45,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong on our side.' });
 });
 
-async function start() {
-  await mongoose.connect(process.env.MONGODB_URI);
-  console.log('MongoDB connected');
-  require('./jobs/reminders').startReminderJob();
-  const port = process.env.PORT || 5000;
-  app.listen(port, () => console.log(`Did it help? listening on ${port}`));
-}
-
-start().catch((err) => {
-  console.error('Failed to start', err);
-  process.exit(1);
-});
+require('./lib/store'); // opens the SQLite database and creates the tables
+require('./jobs/reminders').startReminderJob();
+const port = process.env.PORT || 5000;
+app.listen(port, () => console.log(`Did it help? listening on ${port}`));

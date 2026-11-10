@@ -20,15 +20,15 @@ A mentor or manager opens a read-only link and sees what you are doing today and
 
 ### Rules that keep the numbers honest
 
-- Answer and share tokens are random (256 bits) and only their SHA-256 hash is stored in MongoDB.
+- Answer and share tokens are random (256 bits) and only their SHA-256 hash is stored in the database.
 - The owner can't answer their own items: an answer sent with the owner's login token gets a 403.
-- The planned day can't be edited (there is no edit route and the field is immutable). Only undelivered items can be dropped, and nothing can be deleted, so a delivered item and its answer stay on the record.
+- The planned day can't be edited (there is no edit route, and a database trigger refuses any change). Only undelivered items can be dropped, and nothing can be deleted, so a delivered item and its answer stay on the record (a database trigger also refuses deletes).
 - Every item keeps `createdAt`, `deliveredAt`, `askedAt`, `askedVia`, `reminderSentAt`, `answeredAt`.
 - `askedAt` and `askedVia` are saved only when viaSocket returns 2xx. If it fails, the item shows the error, and "Ask again" or "Copy message" still work.
 
 ## Run locally
 
-Requires Node 20+ and a MongoDB Atlas connection string.
+Requires Node 22.5+ (the database is Node's built-in SQLite, so there is nothing else to install or run).
 
 ```bash
 cp .env.example .env        # then fill it in
@@ -45,7 +45,7 @@ For local use, `APP_URL=http://localhost:5173` makes the links in messages open 
 
 | Name | Purpose |
 | --- | --- |
-| `MONGODB_URI` | MongoDB Atlas connection string |
+| `DATABASE_PATH` | Optional. SQLite file location (default `server/data/did-it-help.db`). On a host, point it at a persistent disk |
 | `JWT_SECRET` | Signs login tokens |
 | `APP_URL` | Public URL, no trailing slash. Every link sent through viaSocket is built from it |
 | `VIASOCKET_ASK_WEBHOOK_URL` | Webhook URL of the ask flow. Used server-side only |
@@ -54,20 +54,22 @@ For local use, `APP_URL=http://localhost:5173` makes the links in messages open 
 
 ## Deploy on Render (one service)
 
-Express serves the built React app, so everything runs as one web service.
+Express serves the built React app, so everything runs as one web service. The data lives in one SQLite file, so the service **needs a persistent disk**; without one, every redeploy would wipe your plans and answers.
 
-1. **MongoDB Atlas**: create a free cluster, add a database user, and under *Network Access* allow `0.0.0.0/0` (Render's IPs change). Copy the connection string into `MONGODB_URI`.
-2. Push this repo to GitHub.
-3. On Render choose **New → Blueprint** and pick the repo (it reads `render.yaml`), or **New → Web Service** with:
+1. Push this repo to GitHub.
+2. On Render choose **New → Blueprint** and pick the repo. It reads `render.yaml`, which creates a web service with a 1 GB disk mounted at `/var/data` (disks need a paid plan, such as Starter). Or create a **Web Service** by hand with:
    - Build command: `npm install --prefix server && npm run build`
    - Start command: `npm start`
    - Health check path: `/healthz`
-4. Set the environment variables: `MONGODB_URI`, `APP_URL` (your `https://<name>.onrender.com` URL, which you only know after the first deploy, so set it and redeploy), `VIASOCKET_ASK_WEBHOOK_URL` (see below), and `JWT_SECRET` and `DIGEST_KEY` (the blueprint generates them).
-5. Open the URL, create the owner account, then **Settings → Create link** for the manager link.
+   - A disk mounted at `/var/data`, and the env var `DATABASE_PATH=/var/data/did-it-help.db`
+3. Set the environment variables: `APP_URL` (your `https://<name>.onrender.com` URL, which you only know after the first deploy, so set it and redeploy), `VIASOCKET_ASK_WEBHOOK_URL` (see below), and `JWT_SECRET` and `DIGEST_KEY` (the blueprint generates them).
+4. Open the URL, create the owner account, then **Settings → Create link** for the manager link.
 
-Railway works the same way: same build and start commands, same variables.
+Railway works the same way: same build and start commands and variables, with a volume mounted at `/data` and `DATABASE_PATH=/data/did-it-help.db`.
 
-**Free-tier note:** Render's free plan sleeps after inactivity, which also pauses the built-in 09:00 reminder cron. The server runs a reminder check 30 seconds after every boot, and you can add the optional backup flow below so reminders go out reliably.
+Run a single instance only (SQLite is a single-writer file). Back up by copying the `.db` file.
+
+**Sleeping hosts:** if your plan sleeps when idle, the built-in 09:00 reminder cron pauses too. The server runs a reminder check 30 seconds after every boot, and you can add the optional backup flow below so reminders go out reliably.
 
 ## viaSocket flows
 
@@ -155,7 +157,8 @@ If your host sleeps, add a flow on a daily schedule that calls `GET https://<APP
 
 ```
 client/   React + Vite + Tailwind (JavaScript)
-server/   Express + Mongoose
+server/   Express + SQLite (node:sqlite)
+  lib/store.js     database schema and queries
   lib/scoring.js   all scoring logic
   lib/viasocket.js the only code that calls viaSocket
   jobs/reminders.js daily reminder job (node-cron)
@@ -163,5 +166,7 @@ server/   Express + Mongoose
 
 ## Notes
 
+- The original brief asked for MongoDB; the data layer was switched to SQLite so the app runs anywhere with no database service. The schema in `server/lib/store.js` mirrors the User, Item, Answer, AnswerToken and ShareLink models.
+- Node prints an "ExperimentalWarning: SQLite" line at startup. That is expected.
 - Passwords are hashed with `bcryptjs` (a pure-JavaScript bcrypt, so deploys need no native build).
 - v1 has no automated tests by request.

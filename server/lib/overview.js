@@ -1,20 +1,17 @@
 // Builds the payload used by both the owner dashboard and the read-only manager view.
-const Item = require('../models/Item');
-const Answer = require('../models/Answer');
+const store = require('./store');
 const dates = require('./dates');
 const scoring = require('./scoring');
 
 async function loadItems(ownerId) {
-  const items = await Item.find({ owner: ownerId }).sort({ plannedDay: 1, createdAt: 1 }).lean();
-  const answers = await Answer.find({ item: { $in: items.map((i) => i._id) } }).lean();
-  const byItem = new Map(answers.map((a) => [String(a.item), a]));
-  return items.map((i) => ({ ...i, answer: byItem.get(String(i._id)) || null }));
+  const byItem = new Map(store.answers.listByOwner(ownerId).map((a) => [a.itemId, a]));
+  return store.items.listByOwner(ownerId).map((i) => ({ ...i, answer: byItem.get(i.id) || null }));
 }
 
 function serializeItem(item, today, { forManager = false } = {}) {
   const delivered = scoring.deliveredDay(item);
   return {
-    id: String(item._id),
+    id: item.id,
     what: item.what,
     forWhom: item.forWhom,
     contact: forManager ? undefined : item.contact,
@@ -38,7 +35,7 @@ function serializeItem(item, today, { forManager = false } = {}) {
 async function buildOverview(user, weekParam, opts = {}) {
   const today = dates.today();
   const weekStart = dates.isDay(weekParam) ? dates.weekStartOf(weekParam) : dates.weekStartOf(today);
-  const all = await loadItems(user._id);
+  const all = await loadItems(user.id);
   const ser = (i) => serializeItem(i, today, opts);
 
   const score = scoring.scoreWeek(all, weekStart);

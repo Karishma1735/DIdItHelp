@@ -1,8 +1,5 @@
 const express = require('express');
-const mongoose = require('mongoose');
-const Item = require('../models/Item');
-const Answer = require('../models/Answer');
-const User = require('../models/User');
+const store = require('../lib/store');
 const dates = require('../lib/dates');
 const { requireAuth } = require('../middleware/auth');
 const { sendAsk, createAnswerLinks, messageText } = require('../lib/viasocket');
@@ -22,41 +19,32 @@ function isHttpUrl(v) {
   }
 }
 
-async function findOwned(req, res) {
-  if (!mongoose.isValidObjectId(req.params.id)) {
-    res.status(404).json({ error: 'Item not found.' });
-    return null;
-  }
-  const item = await Item.findOne({ _id: req.params.id, owner: req.userId });
+function findOwned(req, res) {
+  const item = /^\d+$/.test(req.params.id) ? store.items.getOwned(req.params.id, req.userId) : null;
   if (!item) res.status(404).json({ error: 'Item not found.' });
   return item;
 }
 
 async function reply(res, item, status = 200) {
-  const withAnswer = (await loadItems(item.owner)).find((i) => String(i._id) === String(item._id));
+  const withAnswer = (await loadItems(item.owner)).find((i) => i.id === item.id);
   res.status(status).json({ item: serializeItem(withAnswer, dates.today()) });
 }
 
 // Sends the ask. askedAt / askedVia are saved ONLY when viaSocket answers 2xx.
 async function askAndRecord(item, owner) {
   const result = await sendAsk(item, owner, false);
-  if (result.ok) {
-    item.askedAt = new Date();
-    item.askedVia = result.channel;
-    item.askError = '';
-  } else {
-    item.askError = result.error;
-  }
-  await item.save();
+  return store.items.update(
+    item.id,
+    result.ok ? { askedAt: new Date().toISOString(), askedVia: result.channel, askError: '' } : { askError: result.error }
+  );
 }
 
 router.get('/overview', async (req, res) => {
-  const user = await User.findById(req.userId);
-  res.json(await buildOverview(user, req.query.week));
+  res.json(await buildOverview(store.users.byId(req.userId), req.query.week));
 });
 
 router.post('/items', async (req, res) => {
-  const user = await User.findById(req.userId);
+  const user = store.users.byId(req.userId);
   const what = str(req.body.what, 300);
   const plannedDay = req.body.plannedDay;
   const isForMentor = req.body.isForMentor === true;
@@ -78,54 +66,46 @@ router.post('/items', async (req, res) => {
     return res.status(400).json({ error: 'The planned day can’t be in the past.' });
   }
 
-  const item = await Item.create({ owner: user._id, what, forWhom, contact, isForMentor, plannedDay });
-  await reply(res, item, 201);
+  await reply(res, store.items.create({ owner: user.id, what, forWhom, contact, isForMentor, plannedDay }), 201);
 });
 
-// No PATCH route exists for items on purpose: the planned day can't be edited.
+// No PATCH route exists for items on purpose: the planned day can't be edited
+// (the database also refuses it with a trigger).
 
 router.post('/items/:id/deliver', async (req, res) => {
-  const item = await findOwned(req, res);
+  let item = findOwned(req, res);
   if (!item) return;
   if (item.status !== 'planned') return res.status(409).json({ error: 'This item is already delivered or dropped.' });
   const proofUrl = str(req.body.proofUrl, 1000);
   if (!isHttpUrl(proofUrl)) {
     return res.status(400).json({ error: 'Add a proof link (PR, live flow or doc) starting with http:// or https://.' });
   }
-  item.status = 'delivered';
-  item.proofUrl = proofUrl;
-  item.deliveredAt = new Date();
-  await item.save();
-  await askAndRecord(item, await User.findById(req.userId));
+  item = store.items.update(item.id, { status: 'delivered', proofUrl, deliveredAt: new Date().toISOString() });
+  item = await askAndRecord(item, store.users.byId(req.userId));
   await reply(res, item);
 });
 
 router.post('/items/:id/ask', async (req, res) => {
-  const item = await findOwned(req, res);
+  const item = findOwned(req, res);
   if (!item) return;
   if (item.status !== 'delivered') return res.status(409).json({ error: 'Only delivered items can be asked about.' });
-  await askAndRecord(item, await User.findById(req.userId));
-  await reply(res, item);
+  await reply(res, await askAndRecord(item, store.users.byId(req.userId)));
 });
 
 router.post('/items/:id/message', async (req, res) => {
-  const item = await findOwned(req, res);
+  const item = findOwned(req, res);
   if (!item) return;
   if (item.status !== 'delivered') return res.status(409).json({ error: 'Only delivered items can be asked about.' });
-  const owner = await User.findById(req.userId);
-  const links = await createAnswerLinks(item._id);
-  res.json({ text: messageText(item, owner, links) });
+  const links = await createAnswerLinks(item.id);
+  res.json({ text: messageText(item, store.users.byId(req.userId), links) });
 });
 
 // Dropping is allowed only before delivery. A delivered item (and its answer) can never be removed.
 router.post('/items/:id/drop', async (req, res) => {
-  const item = await findOwned(req, res);
+  const item = findOwned(req, res);
   if (!item) return;
   if (item.status !== 'planned') return res.status(409).json({ error: 'Delivered items can’t be dropped.' });
-  item.status = 'dropped';
-  item.droppedAt = new Date();
-  await item.save();
-  await reply(res, item);
+  await reply(res, store.items.update(item.id, { status: 'dropped', droppedAt: new Date().toISOString() }));
 });
 
 module.exports = router;

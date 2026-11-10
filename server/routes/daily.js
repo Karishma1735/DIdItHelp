@@ -1,6 +1,6 @@
 // Endpoints for viaSocket schedules. Protected by ?key=<DIGEST_KEY>.
 const express = require('express');
-const User = require('../models/User');
+const store = require('../lib/store');
 const dates = require('../lib/dates');
 const scoring = require('../lib/scoring');
 const { loadItems, serializeItem } = require('../lib/overview');
@@ -28,10 +28,10 @@ const brief = (i) => ({
 const bullets = (list) => (list.length ? list.map((i) => `• ${i.what} (for ${i.forWhom})`).join('\n') : 'None');
 
 router.get('/today', keyCheck, async (req, res) => {
-  const user = await User.findOne();
+  const user = store.users.first();
   if (!user) return res.status(404).json({ error: 'No owner account yet.' });
   const today = dates.today();
-  const all = (await loadItems(user._id)).map((i) => serializeItem(i, today));
+  const all = (await loadItems(user.id)).map((i) => serializeItem(i, today));
 
   const plan = all.filter((i) => i.plannedDay === today && i.status !== 'dropped');
   const deliveredToday = all.filter((i) => i.status === 'delivered' && String(i.deliveredAt && dates.dayOf(new Date(i.deliveredAt))) === today);
@@ -55,11 +55,11 @@ router.get('/today', keyCheck, async (req, res) => {
 });
 
 router.get('/digest', keyCheck, async (req, res) => {
-  const user = await User.findOne();
+  const user = store.users.first();
   if (!user) return res.status(404).json({ error: 'No owner account yet.' });
   const today = dates.today();
   const weekStart = dates.weekStartOf(today);
-  const all = await loadItems(user._id);
+  const all = await loadItems(user.id);
   const s = scoring.scoreWeek(all, weekStart);
   const hero = scoring.heroSentence(user.name, s, today);
   const numbers = { impact: s.impact, reliability: s.reliability, answerRate: s.answerRate };

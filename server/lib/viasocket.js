@@ -1,6 +1,6 @@
 // The only place the server talks to viaSocket. Never called from the browser.
 const { generateToken, hashToken } = require('./tokens');
-const AnswerToken = require('../models/AnswerToken');
+const store = require('./store');
 
 const appUrl = () => (process.env.APP_URL || 'http://localhost:5000').replace(/\/+$/, '');
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -11,7 +11,7 @@ const channelFor = (contact) => (EMAIL_RE.test(String(contact).trim()) ? 'email'
 // Every ask or copied message gets a fresh token. Earlier links keep working.
 async function createAnswerLinks(itemId) {
   const raw = generateToken();
-  await AnswerToken.create({ item: itemId, tokenHash: hashToken(raw) });
+  store.tokens.create(itemId, hashToken(raw));
   const answerUrl = `${appUrl()}/a/${raw}`;
   return {
     answerUrl,
@@ -72,7 +72,7 @@ async function postToViaSocket(payload) {
 }
 
 async function sendAsk(item, owner, isReminder = false) {
-  const links = await createAnswerLinks(item._id);
+  const links = await createAnswerLinks(item.id);
   return postToViaSocket(buildPayload(item, owner, links, isReminder));
 }
 

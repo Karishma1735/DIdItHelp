@@ -18,6 +18,6 @@ function requireAuth(req, res, next) {
 }
 
 const signToken = (user) =>
-  jwt.sign({ sub: String(user._id) }, process.env.JWT_SECRET, { expiresIn: '30d' });
+  jwt.sign({ sub: user.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
 module.exports = { requireAuth, userIdFromRequest, signToken };
