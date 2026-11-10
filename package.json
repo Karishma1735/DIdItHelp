@@ -1,0 +1,13 @@
+{
+  "name": "did-it-help",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Did it help? A daily task manager that measures the value of work, confirmed by the people who received it.",
+  "scripts": {
+    "build": "npm install --prefix client --include=dev && npm run build --prefix client",
+    "start": "node server/index.js",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client"
+  },
+  "engines": { "node": ">=20" }
+}

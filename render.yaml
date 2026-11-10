@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: did-it-help
+    runtime: node
+    plan: free
+    buildCommand: npm install --prefix server && npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DIGEST_KEY
+        generateValue: true
+      - key: APP_URL
+        sync: false
+      - key: VIASOCKET_ASK_WEBHOOK_URL
+        sync: false
+      - key: APP_TIMEZONE
+        value: Asia/Kolkata
