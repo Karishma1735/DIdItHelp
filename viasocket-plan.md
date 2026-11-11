@@ -1,41 +1,46 @@
-# viaSocket plan: users connect their own apps
+# viaSocket plan (revised): the whole catalog, in the product's own page
 
-Status: proposed, waiting for a yes. Skill: viasocket-integrations (2026-11-04.3), feature `app-integrations`, SDK format (Node.js, `viasocket-apps`).
+Status: proposed, waiting for a yes. Skill: viasocket-integrations (2026-11-04.3), feature `app-integrations` with viaSocket's prebuilt screens (`embed.md`), SDK format (Node.js, `viasocket-apps`).
+Replaces the first plan (Slack and Gmail only), which was rejected: the goal is that a person can connect ANY app.
 
 ## What people will see
 
-- A **Connections** page for every signed-in person (employee or manager), with a **Connect Slack** and a **Connect Gmail** button, each showing the app's icon.
-- Each person connects only their own accounts. A manager can never see or use an employee's connection.
-- After connecting Slack, the person picks once which Slack person is them (changeable on the same card).
-- A **Send me a test message** button on each connected app sends a fixed line to the person themself.
-- Nothing else changes yet. The "Did it help?" ask, the team invite and the daily routine keep using the shared webhooks until it is decided which messages should go from a person's own account.
+- The **Integrations** page, for every signed-in person (employee or manager), shows viaSocket's own screens inside the app: the catalog of every app (2,300+), a Connect button per app, a form for every action, and the person's own automations with their runs.
+- Each person connects only their own accounts and builds only their own automations (for example "every morning, post my plan to Slack"). A manager cannot see or use an employee's connections or automations.
+- Managers keep the existing "message setup" status cards (ask webhook, invite webhook, routine URLs) on the same page, above the viaSocket screens.
+- Nothing else changes yet. The "Did it help?" ask, team invites and the daily routine keep using the shared webhooks.
 
 ## Table (who supplies every value, and when)
 
-| app | action (key, version) | key of `inputData` | who supplies it | when |
-| --- | --- | --- | --- | --- |
-| gmail | `Send_Email` `v55` | `to` | the product: the signed-in person's own account email | per run |
-| gmail | `Send_Email` `v55` | `subject`, `messageBody` | the product: fixed test text | per run |
-| gmail | `Send_Email` `v55` | `from`, `cc`, `bcc`, `fromName`, `replyTo`, `attachments`, `labelIds` | left out on purpose (Gmail's own defaults for the connected account) | never sent |
-| slack | `Send_Message` `v107` | `destination.messageto` | the product: constant `"user"` (a direct message to one person) | constant |
-| slack | `Send_Message` `v107` | `destination.userId` | the person, from the list of people in their Slack ("Which one is you?") | once, right after Connect; stored with the connection; changeable on the card |
-| slack | `Send_Message` `v107` | `markdown_content` | the product: fixed test text | per run |
-| slack | `Send_Message` `v107` | `destination.channel_id`, `destination.thread_*`, `destination.tagged_users`, `buttons`, `schedule_*`, `post_at`, `bot_details`, `preview` | left out on purpose | never sent |
+The product's code fills no action value. The person fills each action in viaSocket's own form, drawn from the action's real schema, with that form's option lists.
 
-Who picks the action: the product's code (the **Send me a test message** button). It is shown, and the Slack choice changed, on that person's Connections card.
+| app | action or trigger | key of `inputData` | who supplies it | when |
+| --- | --- | --- | --- | --- |
+| any app the person picks | any action or trigger they pick | every key | the person, in viaSocket's own form (lists for `PICK` keys come from viaSocket) | when they build an automation; saved by viaSocket with the automation |
+| none | none | none | the product supplies nothing per run | never |
+
+Who picks the action: the person, on screen. Where it is shown and changed: the person's automation list inside the Integrations page.
+
+## Choices I will make unless told otherwise (change any)
+
+1. Landing screen: the person's own list ("Your automations"); the catalog is one click away.
+2. Hidden: the "Custom Logic (JS)" and "HTTP/API Request" cards, to keep it simple for non-developers. Kept: apps, schedules, webhooks.
+3. Colours and font follow the blue theme (Midnight Blue `#2B4257`, DM Sans).
+4. The product does not store or call what people build. viaSocket runs it (a later step could run a person's automation when they mark something delivered).
 
 ## Where each secret lives
 
-- `VIASOCKET_ORG_ID`, `VIASOCKET_PROJECT_ID`, `VIASOCKET_EMBED_SECRET`: server settings only (`.env` locally, the host's settings online). Never sent to a browser.
-- The browser gets only a short-lived per-person embed token from a signed-in endpoint, for the Connect popup.
-- Each person's `auth_id` and enabled-app `script_id` are stored on the server per person and app. Before any run the server checks the signed-in person owns the id it is about to use.
+- `VIASOCKET_ORG_ID`, `VIASOCKET_PROJECT_ID`, `VIASOCKET_EMBED_SECRET`: server settings only. Never sent to a browser.
+- The browser gets only a per-person embed token from a signed-in endpoint (`GET /api/viasocket/token`), signed on the server with the secret. The person id inside it is our own user id, never the email.
+- The page's security rules are widened for exactly two viaSocket addresses (the embed script and the embed frame), and the page ignores any message not from the embed's own origin.
 
 ## Tests to run on a real account before building on each call
 
-1. Setup check (done): `listConnections()` for the test user answered with a real list.
-2. Connect Slack and Gmail through the product's own button with a test account (one click from the owner).
-3. Slack: list people (`listOptions` for `destination.userId`), then one `Send_Message` to the test account itself.
-4. Gmail: one `Send_Email` to the test account itself.
-5. `npx -y viasocket-apps check <folder>` over the integration code; every FAIL fixed.
+1. Setup check (done): `listConnections()` answered with a real list.
+2. The token endpoint answers a token for a signed-in test person and refuses a signed-out request.
+3. The screens load in the product's box with that token and fill the box (a real browser run).
+4. One test automation published as the test person reaches the page as a `published` event with a `webhookurl`, then a pause reaches it as `paused`.
+5. Connect an app through the embedded Connect button with a test account (one click from the owner).
+6. `npx -y viasocket-apps check <folder>`; every FAIL fixed.
 
 Anything not run is listed as UNTESTED in the final report and is not switched on.
