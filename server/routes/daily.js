@@ -17,6 +17,13 @@ function keyCheck(req, res, next) {
   next();
 }
 
+// ?user=<email or id> picks whose plan to report; default is the first account.
+function pickUser(req) {
+  const u = typeof req.query.user === 'string' ? req.query.user.trim() : '';
+  if (!u) return store.users.first();
+  return /^\d+$/.test(u) ? store.users.byId(u) : store.users.byEmail(u.toLowerCase());
+}
+
 const brief = (i) => ({
   id: i.id,
   what: i.what,
@@ -28,7 +35,7 @@ const brief = (i) => ({
 const bullets = (list) => (list.length ? list.map((i) => `• ${i.what} (for ${i.forWhom})`).join('\n') : 'None');
 
 router.get('/today', keyCheck, async (req, res) => {
-  const user = store.users.first();
+  const user = pickUser(req);
   if (!user) return res.status(404).json({ error: 'No owner account yet.' });
   const today = dates.today();
   const all = (await loadItems(user.id)).map((i) => serializeItem(i, today));
@@ -55,7 +62,7 @@ router.get('/today', keyCheck, async (req, res) => {
 });
 
 router.get('/digest', keyCheck, async (req, res) => {
-  const user = store.users.first();
+  const user = pickUser(req);
   if (!user) return res.status(404).json({ error: 'No owner account yet.' });
   const today = dates.today();
   const weekStart = dates.weekStartOf(today);

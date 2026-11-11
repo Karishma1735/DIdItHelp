@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL, role TEXT NOT NULL DEFAULT '',
   email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL,
   mentor_name TEXT NOT NULL DEFAULT '', mentor_contact TEXT NOT NULL DEFAULT '',
+  reports_to INTEGER REFERENCES users(id),
+  is_manager INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS items (
@@ -52,12 +54,28 @@ CREATE TABLE IF NOT EXISTS answer_tokens (
   item_id INTEGER NOT NULL REFERENCES items(id),
   token_hash TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS invites (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  manager_id INTEGER NOT NULL REFERENCES users(id),
+  token_hash TEXT NOT NULL UNIQUE, label TEXT NOT NULL DEFAULT '',
+  make_manager INTEGER NOT NULL DEFAULT 0,
+  used_by INTEGER REFERENCES users(id), used_at TEXT, revoked_at TEXT,
+  expires_at TEXT NOT NULL, created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS share_links (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   owner_id INTEGER NOT NULL REFERENCES users(id),
   token_hash TEXT NOT NULL UNIQUE, revoked_at TEXT, created_at TEXT NOT NULL
 );
 `);
+
+// Additive migration for databases created before teams existed. Never drops or rewrites data.
+const userCols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+if (!userCols.includes('reports_to')) db.exec('ALTER TABLE users ADD COLUMN reports_to INTEGER REFERENCES users(id)');
+if (!userCols.includes('is_manager')) {
+  db.exec('ALTER TABLE users ADD COLUMN is_manager INTEGER NOT NULL DEFAULT 0');
+  db.exec('UPDATE users SET is_manager = 1 WHERE id = (SELECT MIN(id) FROM users)'); // the existing owner becomes a manager
+}
 
 const now = () => new Date().toISOString();
 const sid = (v) => String(v);
@@ -66,6 +84,7 @@ const userOut = (r) =>
   r && {
     id: sid(r.id), name: r.name, role: r.role, email: r.email, passwordHash: r.password_hash,
     mentorName: r.mentor_name, mentorContact: r.mentor_contact, createdAt: r.created_at,
+    isManager: !!r.is_manager, reportsTo: r.reports_to == null ? null : sid(r.reports_to),
   };
 
 const itemOut = (r) =>
@@ -97,12 +116,14 @@ const users = {
   first: () => userOut(db.prepare('SELECT * FROM users ORDER BY id LIMIT 1').get()),
   byId: (id) => userOut(db.prepare('SELECT * FROM users WHERE id = ?').get(Number(id))),
   byEmail: (email) => userOut(db.prepare('SELECT * FROM users WHERE email = ?').get(email)),
-  create: ({ name, role, email, passwordHash }) => {
-    const r = db.prepare('INSERT INTO users (name, role, email, password_hash, created_at) VALUES (?,?,?,?,?)')
-      .run(name, role || '', email, passwordHash, now());
+  create: ({ name, role, email, passwordHash, isManager = false, reportsTo = null }) => {
+    const r = db.prepare('INSERT INTO users (name, role, email, password_hash, is_manager, reports_to, created_at) VALUES (?,?,?,?,?,?,?)')
+      .run(name, role || '', email, passwordHash, isManager ? 1 : 0, reportsTo == null ? null : Number(reportsTo), now());
     return users.byId(r.lastInsertRowid);
   },
   update: (id, fields) => { update('users', USER_COLS, id, fields, false); return users.byId(id); },
+  reportsOf: (managerId) =>
+    db.prepare('SELECT * FROM users WHERE reports_to = ? ORDER BY name COLLATE NOCASE, id').all(Number(managerId)).map(userOut),
 };
 
 const items = {
@@ -176,4 +197,45 @@ const share = {
   },
 };
 
-module.exports = { db, users, items, answers, tokens, share };
+const DAY = 24 * 60 * 60 * 1000;
+const inviteOut = (r) =>
+  r && {
+    id: sid(r.id), managerId: sid(r.manager_id), label: r.label, makeManager: !!r.make_manager,
+    usedBy: r.used_by == null ? null : sid(r.used_by), usedAt: r.used_at, revokedAt: r.revoked_at,
+    expiresAt: r.expires_at, createdAt: r.created_at,
+  };
+
+const invites = {
+  create: (managerId, tokenHash, { label = '', makeManager = false } = {}) => {
+    const r = db.prepare('INSERT INTO invites (manager_id, token_hash, label, make_manager, expires_at, created_at) VALUES (?,?,?,?,?,?)')
+      .run(Number(managerId), tokenHash, label, makeManager ? 1 : 0, new Date(Date.now() + 7 * DAY).toISOString(), now());
+    return inviteOut(db.prepare('SELECT * FROM invites WHERE id = ?').get(r.lastInsertRowid));
+  },
+  // Only a link that is unused, not revoked and not expired can be used to join.
+  findActive: (tokenHash) =>
+    inviteOut(db.prepare('SELECT * FROM invites WHERE token_hash = ? AND used_at IS NULL AND revoked_at IS NULL AND expires_at > ?').get(tokenHash, now())),
+  listByManager: (managerId) =>
+    db.prepare('SELECT * FROM invites WHERE manager_id = ? AND revoked_at IS NULL AND (used_at IS NOT NULL OR expires_at > ?) ORDER BY id DESC')
+      .all(Number(managerId), now()).map(inviteOut),
+  // Atomic: returns false if someone else already used it.
+  markUsed: (id, userId) =>
+    db.prepare('UPDATE invites SET used_by = ?, used_at = ? WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL')
+      .run(Number(userId), now(), Number(id)).changes === 1,
+  revoke: (id, managerId) =>
+    db.prepare('UPDATE invites SET revoked_at = ? WHERE id = ? AND manager_id = ? AND used_at IS NULL AND revoked_at IS NULL')
+      .run(now(), Number(id), Number(managerId)).changes === 1,
+};
+
+function tx(fn) {
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const out = fn();
+    db.exec('COMMIT');
+    return out;
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+module.exports = { db, users, items, answers, tokens, share, invites, tx };

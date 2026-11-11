@@ -12,6 +12,15 @@ A mentor or manager opens a read-only link and sees what you are doing today and
 2. **Deliver**: mark it delivered with a proof link (PR, live flow, doc). No proof, no delivery.
 3. **Confirm**: the server posts to your viaSocket flow, which messages the receiver: "Hi Rahul, I delivered “Zoho plug”. Did it help you?" with three one-tap links. The receiver taps one.
 
+### Teams: My desk and Team
+
+- Every user has a **My desk** tab (planning, delivering, settings). Managers also get a **Team** tab.
+- **Team** shows one card per direct report: today's plan, delivered and late items, their weekly hero sentence and the three numbers, plus a team roll-up using the same formulas. People are listed alphabetically, never ranked. Open a card for that person's full week, read-only.
+- A manager can only read their own direct reports. They can't change, ask about or drop anyone's items. Receivers' Slack handles and emails are never shown to managers.
+- **Joining:** a manager creates an invite link (works once, expires after 7 days, stored hashed). The person opens it and picks their own password. An invite can also make the new person a manager.
+- **Upgrading an existing database:** the schema change only adds columns and tables. The existing owner becomes a manager and all data stays as it is.
+- `/api/today` and `/api/digest` accept `?user=<email or id>` for per-person flows. Without it they report the first account.
+
 ### Scoring (per week, Monday to Sunday) — all in `server/lib/scoring.js`
 
 - **Impact** = sum of answers for items delivered that week: helped a lot = 2, a little = 1, didn't help = 0.
@@ -38,7 +47,7 @@ npm run dev:server          # API on http://localhost:5000
 npm run dev:client          # app on http://localhost:5173 (proxies /api to :5000)
 ```
 
-The first account you register becomes the owner (v1 is one owner per workspace).
+The first account you register becomes the workspace's first manager. Everyone else joins with an invite link (see Teams).
 For local use, `APP_URL=http://localhost:5173` makes the links in messages open the Vite dev server.
 
 ### Environment variables
@@ -169,7 +178,10 @@ If your host sleeps, add a flow on a daily schedule that calls `GET https://<APP
 | `POST /api/items/:id/deliver` `/ask` `/drop` `/message` | owner | Deliver with proof, ask again, drop, get the copyable message |
 | `GET/POST /api/answer/:token` | token, rate-limited | Answer page data and answers |
 | `GET/POST/DELETE /api/share` | owner | Manager link status, create, revoke |
-| `GET /api/manager/:token` | token | Read-only manager data |
+| `GET /api/manager/:token` | token | Read-only data for a share link |
+| `GET /api/team`, `/api/team/:userId/overview` | manager | Team dashboard and one report's read-only desk |
+| `GET/POST/DELETE /api/team/invites` | manager | Invite links for new team members |
+| `GET /api/auth/invite/:token` | rate-limited | Who invited you (join page) |
 | `GET /api/today`, `/api/digest`, `/api/jobs/reminders` | `?key=DIGEST_KEY` | For viaSocket schedules |
 
 ## Project layout

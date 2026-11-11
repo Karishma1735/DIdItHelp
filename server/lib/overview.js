@@ -3,7 +3,7 @@ const store = require('./store');
 const dates = require('./dates');
 const scoring = require('./scoring');
 
-async function loadItems(ownerId) {
+function loadItems(ownerId) {
   const byItem = new Map(store.answers.listByOwner(ownerId).map((a) => [a.itemId, a]));
   return store.items.listByOwner(ownerId).map((i) => ({ ...i, answer: byItem.get(i.id) || null }));
 }
@@ -35,7 +35,7 @@ function serializeItem(item, today, { forManager = false } = {}) {
 async function buildOverview(user, weekParam, opts = {}) {
   const today = dates.today();
   const weekStart = dates.isDay(weekParam) ? dates.weekStartOf(weekParam) : dates.weekStartOf(today);
-  const all = await loadItems(user.id);
+  const all = loadItems(user.id);
   const ser = (i) => serializeItem(i, today, opts);
 
   const score = scoring.scoreWeek(all, weekStart);
@@ -66,4 +66,52 @@ async function buildOverview(user, weekParam, opts = {}) {
   };
 }
 
-module.exports = { loadItems, serializeItem, buildOverview };
+// What a manager sees on the Team tab: one row per direct report plus a team roll-up.
+// Contacts are never included, and items are summarised by state, not counted as a score.
+function buildTeamSummary(manager, weekParam) {
+  const today = dates.today();
+  const weekStart = dates.isDay(weekParam) ? dates.weekStartOf(weekParam) : dates.weekStartOf(today);
+  const lite = (i) => ({ id: i.id, what: i.what, forWhom: i.forWhom, state: i.state });
+
+  const rows = store.users.reportsOf(manager.id).map((member) => {
+    const all = loadItems(member.id);
+    const score = scoring.scoreWeek(all, weekStart);
+    const ser = (i) => serializeItem(i, today, { forManager: true });
+    return {
+      score,
+      member: {
+        id: member.id,
+        name: member.name,
+        role: member.role,
+        isManager: member.isManager,
+        hero: scoring.heroSentence(member.name, score, today),
+        numbers: { impact: score.impact, reliability: score.reliability, answerRate: score.answerRate },
+        today: {
+          planned: all.filter((i) => i.plannedDay === today && i.status !== 'dropped').map(ser).map(lite),
+          deliveredToday: all.filter((i) => i.status === 'delivered' && scoring.deliveredDay(i) === today).map(ser).map(lite),
+          late: all.filter((i) => i.status === 'planned' && i.plannedDay < today).map(ser).map(lite),
+        },
+        waitingForAnswer: score.waiting > 0,
+      },
+    };
+  });
+
+  const team = scoring.teamScore(rows.map((r) => r.score), weekStart);
+  return {
+    manager: { name: manager.name, role: manager.role },
+    today,
+    week: { start: weekStart, end: team.weekEnd, isCurrent: weekStart === dates.weekStartOf(today) },
+    team: {
+      hero: scoring.heroSentence('', team, today, { team: true }),
+      numbers: {
+        impact: team.impact,
+        reliability: team.reliability,
+        answerRate: team.answerRate,
+        explanations: scoring.EXPLANATIONS,
+      },
+    },
+    members: rows.map((r) => r.member),
+  };
+}
+
+module.exports = { loadItems, serializeItem, buildOverview, buildTeamSummary };

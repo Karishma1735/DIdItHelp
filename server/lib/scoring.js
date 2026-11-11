@@ -62,8 +62,8 @@ function weekPrefix(weekStart, today) {
   return `In the week of ${weekStart}`;
 }
 
-function heroSentence(ownerName, s, today) {
-  const first = String(ownerName || 'They').split(' ')[0];
+function heroSentence(ownerName, s, today, { team = false } = {}) {
+  const first = team ? 'the team' : String(ownerName || 'They').split(' ')[0];
   const prefix = weekPrefix(s.weekStart, today);
   const head = s.plannedCount
     ? `${prefix} ${first} delivered ${s.deliveredOfPlanned} of ${s.plannedCount} planned things.`
@@ -84,6 +84,26 @@ const EXPLANATIONS = {
   answerRate: 'How many of the people we asked have answered.',
 };
 
+// Combines several people's weekly scores into one team score, using the same formulas on the summed inputs.
+function teamScore(scores, weekStart) {
+  const sum = (k) => scores.reduce((a, s) => a + s[k], 0);
+  const planned = sum('plannedCount');
+  const asked = sum('asked');
+  return {
+    weekStart,
+    weekEnd: weekEndOf(weekStart),
+    plannedCount: planned,
+    deliveredOfPlanned: sum('deliveredOfPlanned'),
+    impact: sum('impact'),
+    reliability: planned ? Math.round((sum('deliveredOfPlanned') / planned) * 100) : null,
+    answerRate: asked ? Math.round((sum('askedAnswered') / asked) * 100) : null,
+    lot: sum('lot'),
+    little: sum('little'),
+    none: sum('none'),
+    waiting: sum('waiting'),
+  };
+}
+
 // The last `n` weeks ending at the current week, newest first.
 function weeklyTable(items, today, n = 8) {
   const current = weekStartOf(today);
@@ -99,5 +119,6 @@ module.exports = {
   itemState,
   scoreWeek,
   heroSentence,
+  teamScore,
   weeklyTable,
 };
