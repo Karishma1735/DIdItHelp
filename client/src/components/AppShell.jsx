@@ -19,12 +19,8 @@ function useNav() {
   const { user } = useAuth();
   return [
     { to: '/', label: 'My desk', icon: ICONS.desk, end: true },
-    ...(user.isManager
-      ? [
-          { to: '/team', label: 'Team', icon: ICONS.team },
-          { to: '/integrations', label: 'Integrations', icon: ICONS.plug },
-        ]
-      : []),
+    ...(user.isManager ? [{ to: '/team', label: 'Team', icon: ICONS.team }] : []),
+    { to: '/integrations', label: 'Integrations', icon: ICONS.plug },
     { to: '/settings', label: 'Settings', icon: ICONS.cog },
   ];
 }

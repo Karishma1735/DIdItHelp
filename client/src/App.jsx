@@ -27,7 +27,7 @@ export default function App() {
       <Route path="/join/:token" element={<Join />} />
       <Route path="/" element={<Private><Dashboard /></Private>} />
       <Route path="/settings" element={<Private><Settings /></Private>} />
-      <Route path="/integrations" element={<Private manager><Integrations /></Private>} />
+      <Route path="/integrations" element={<Private><Integrations /></Private>} />
       <Route path="/team" element={<Private manager><Team /></Private>} />
       <Route path="/team/:userId" element={<Private manager><TeamMember /></Private>} />
       <Route path="*" element={<Navigate to="/" replace />} />

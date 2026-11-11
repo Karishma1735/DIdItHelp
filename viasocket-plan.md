@@ -1,9 +1,12 @@
 # viaSocket plan (revised): the whole catalog, in the product's own page
 
-Status: proposed, waiting for a yes. Skill: viasocket-integrations (2026-11-04.3), feature `app-integrations` with viaSocket's prebuilt screens (`embed.md`), SDK format (Node.js, `viasocket-apps`).
+Status: confirmed by the owner with one change (Slack and Gmail must be on top with Connect buttons). Built; see the report in the chat for what is tested and what is UNTESTED. Skill: viasocket-integrations (2026-11-04.3), feature `app-integrations` with viaSocket's prebuilt screens (`embed.md`), SDK format (Node.js, `viasocket-apps`).
 Replaces the first plan (Slack and Gmail only), which was rejected: the goal is that a person can connect ANY app.
 
 ## What people will see
+
+- **On top:** Slack and Gmail cards with a Connect button each. After connecting Slack the person picks once which Slack person they are (changeable). **Send me a test message** sends a fixed line to that person only (Gmail: to their own account email).
+- **Below:** every other app, through the screens below.
 
 - The **Integrations** page, for every signed-in person (employee or manager), shows viaSocket's own screens inside the app: the catalog of every app (2,300+), a Connect button per app, a form for every action, and the person's own automations with their runs.
 - Each person connects only their own accounts and builds only their own automations (for example "every morning, post my plan to Slack"). A manager cannot see or use an employee's connections or automations.
@@ -17,7 +20,9 @@ The product's code fills no action value. The person fills each action in viaSoc
 | app | action or trigger | key of `inputData` | who supplies it | when |
 | --- | --- | --- | --- | --- |
 | any app the person picks | any action or trigger they pick | every key | the person, in viaSocket's own form (lists for `PICK` keys come from viaSocket) | when they build an automation; saved by viaSocket with the automation |
-| none | none | none | the product supplies nothing per run | never |
+| gmail | `Send_Email` `v55` | `to`, `subject`, `messageBody` | the product: the person's own account email and fixed test text | per test message |
+| slack | `Send_Message` `v107` | `destination.messageto` (constant `"user"`), `markdown_content` (fixed test text) | the product | per test message |
+| slack | `Send_Message` `v107` | `destination.userId` | the person, from the list of people in their Slack | once, right after Connect; stored with the connection; changeable |
 
 Who picks the action: the person, on screen. Where it is shown and changed: the person's automation list inside the Integrations page.
 

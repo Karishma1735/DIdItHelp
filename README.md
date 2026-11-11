@@ -27,6 +27,16 @@ A mentor or manager opens a read-only link and sees what you are doing today and
 
 A blue palette (Blue Gray #88A9C3, Midnight Blue #2B4257, Navy Blue #14202E, Royal Blue #091235, plus pale tints of Blue Gray for light surfaces), with Fraunces (headings and big numbers), DM Sans (text) and DM Mono (small labels), all bundled with the app so nothing loads from a font CDN. Light and dark mode. Signed-in pages use a sidebar: **My desk**, **Team** and **Integrations** (managers), and **Settings**. The **Integrations** page shows whether the ask and invite webhooks are set up, the routine flow URLs to copy, and the saved viaSocket project. It never shows secrets.
 
+### Integrations (viaSocket) for every person
+
+The **Integrations** page lets each person connect their own apps through viaSocket:
+
+- **Slack and Gmail on top**, each with a Connect button. After connecting Slack, the person picks once which Slack person they are. **Send me a test message** sends a fixed line to that person only.
+- **Every other app**: viaSocket's own screens inside the page (catalog of 2,300+ apps, Connect, action forms, the person's own automations).
+- Managers also see the shared message setup (ask and invite webhooks, routine URLs).
+- Each person connects only their own accounts. Their connection ids stay on the server and are never sent to a browser. The browser gets only a short-lived per-person token from `GET /api/viasocket/token`, signed with `VIASOCKET_EMBED_SECRET` (server only).
+- Needs `VIASOCKET_ORG_ID`, `VIASOCKET_PROJECT_ID` and `VIASOCKET_EMBED_SECRET` as server settings. The app's security rules allow `*.viasocket.com` for the embedded screens and the connect script.
+
 ### Scoring (per week, Monday to Sunday) — all in `server/lib/scoring.js`
 
 - **Impact** = sum of answers for items delivered that week: helped a lot = 2, a little = 1, didn't help = 0.
@@ -193,6 +203,7 @@ If your host sleeps, add a flow on a daily schedule that calls `GET https://<APP
 | `GET /api/manager/:token` | token | Read-only data for a share link |
 | `GET /api/team`, `/api/team/:userId/overview` | manager | Team dashboard and one report's read-only desk |
 | `GET/POST/DELETE /api/team/invites` | manager | Invite links for new team members |
+| `GET /api/viasocket/token`, `/status`, `/slack/people`; `POST /api/viasocket/connected`, `/slack/me`, `/test/:app` | signed in | The person's own viaSocket connections (Slack and Gmail) |
 | `GET /api/integrations` | manager | Read-only viaSocket wiring status (no secrets) |
 | `GET /api/auth/invite/:token` | rate-limited | Who invited you (join page) |
 | `GET /api/today`, `/api/digest`, `/api/jobs/reminders` | `?key=DIGEST_KEY` | For viaSocket schedules |

@@ -61,6 +61,15 @@ CREATE TABLE IF NOT EXISTS invites (
   used_by INTEGER REFERENCES users(id), used_at TEXT, revoked_at TEXT,
   expires_at TEXT NOT NULL, created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS viasocket_connections (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  app TEXT NOT NULL,
+  auth_id TEXT NOT NULL,
+  slack_user_id TEXT, slack_user_label TEXT,
+  created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  UNIQUE (user_id, app)
+);
 CREATE TABLE IF NOT EXISTS share_links (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   owner_id INTEGER NOT NULL REFERENCES users(id),
@@ -273,4 +282,28 @@ function tx(fn) {
   }
 }
 
-module.exports = { db, users, items, answers, tokens, share, invites, tx, removeDemoUser };
+// A person's viaSocket connection per app. auth_id is a credential: server side only, never sent to a browser.
+const connOut = (r) =>
+  r && {
+    userId: sid(r.user_id), app: r.app, authId: r.auth_id,
+    slackUserId: r.slack_user_id, slackUserLabel: r.slack_user_label,
+  };
+const vsConn = {
+  get: (userId, app) => connOut(db.prepare('SELECT * FROM viasocket_connections WHERE user_id = ? AND app = ?').get(Number(userId), app)),
+  // A different auth_id means a new connection, so the saved Slack choice is cleared.
+  upsert: (userId, app, authId) => {
+    const t = now();
+    const cur = vsConn.get(userId, app);
+    if (!cur) {
+      db.prepare('INSERT INTO viasocket_connections (user_id, app, auth_id, created_at, updated_at) VALUES (?,?,?,?,?)').run(Number(userId), app, authId, t, t);
+    } else if (cur.authId !== authId) {
+      db.prepare('UPDATE viasocket_connections SET auth_id = ?, slack_user_id = NULL, slack_user_label = NULL, updated_at = ? WHERE user_id = ? AND app = ?').run(authId, t, Number(userId), app);
+    }
+    return vsConn.get(userId, app);
+  },
+  setSlackMe: (userId, value, label) =>
+    db.prepare('UPDATE viasocket_connections SET slack_user_id = ?, slack_user_label = ?, updated_at = ? WHERE user_id = ? AND app = ?')
+      .run(value, label, now(), Number(userId), 'slack'),
+};
+
+module.exports = { db, users, items, answers, tokens, share, invites, tx, removeDemoUser, vsConn };

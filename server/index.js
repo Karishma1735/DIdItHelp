@@ -24,7 +24,20 @@ for (const key of ['APP_URL', 'VIASOCKET_ASK_WEBHOOK_URL', 'DIGEST_KEY']) {
 
 const app = express();
 app.set('trust proxy', 1); // Render/Railway sit behind a proxy; needed for correct rate limiting
-app.use(helmet());
+// The page may load viaSocket's embedded screens and connect script, and show app icons.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        'script-src': ["'self'", 'https://*.viasocket.com'],
+        'frame-src': ["'self'", 'https://*.viasocket.com'],
+        'connect-src': ["'self'", 'https://*.viasocket.com'],
+        'img-src': ["'self'", 'data:', 'https:'],
+      },
+    },
+  })
+);
 app.use(cors({ origin: process.env.APP_URL || false }));
 app.use(express.json({ limit: '20kb' }));
 
@@ -35,6 +48,7 @@ app.use('/api/answer', require('./routes/answers'));
 app.use('/api/share', require('./routes/share').owner);
 app.use('/api/team', require('./routes/team'));
 app.use('/api/integrations', require('./routes/integrations'));
+app.use('/api/viasocket', require('./routes/viasocket'));
 app.use('/api/manager', require('./routes/share').manager);
 app.use('/api', require('./routes/daily')); // /api/today, /api/digest, /api/jobs/reminders (key protected)
 app.use('/api', require('./routes/items'));
