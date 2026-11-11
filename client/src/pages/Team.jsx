@@ -34,7 +34,11 @@ function MemberCard({ m, week }) {
     <li>
       <Link to={`/team/${m.id}?week=${week}`} className="card block space-y-3 transition hover:border-emerald-600">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="text-lg font-bold">{m.name}{m.isManager && <span className="ml-2 text-xs font-normal muted">manager</span>}</h3>
+          <h3 className="text-lg font-bold">
+            {m.name}
+            {m.isManager && <span className="ml-2 text-xs font-normal muted">manager</span>}
+            {m.isDemo && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">Sample data</span>}
+          </h3>
           <span className="text-sm muted">{m.role}</span>
         </div>
         <p className="font-medium">{m.hero}</p>
@@ -71,6 +75,15 @@ export default function Team() {
   useEffect(() => { load(); }, [load]);
 
   const goTo = (w) => setParams(w ? { week: w } : {});
+  const hasDemo = data?.members.some((m) => m.isDemo);
+
+  async function demo(method) {
+    if (method === 'delete' && !window.confirm('Remove the sample employee and all their sample data?')) return;
+    try {
+      await api[method]('/team/demo');
+      load();
+    } catch (err) { setError(errorMessage(err)); }
+  }
 
   return (
     <AppShell actions={data && <WeekNav week={data.week} today={data.today} onChange={goTo} />}>
@@ -82,9 +95,17 @@ export default function Team() {
           <Hero text={data.team.hero} />
           <Numbers numbers={data.team.numbers} />
           <section>
-            <h2 className="mb-2 text-lg font-bold">Your team</h2>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-lg font-bold">Your team</h2>
+              {hasDemo ? (
+                <button className="btn-ghost" onClick={() => demo('delete')}>Remove sample data</button>
+              ) : (
+                <button className="btn-ghost" onClick={() => demo('post')}>Add a sample employee</button>
+              )}
+            </div>
+            {hasDemo && <p className="mb-2 text-sm muted">The sample employee is included in the totals above. Remove it once you have real people.</p>}
             {data.members.length === 0 ? (
-              <p className="text-sm muted">No one reports to you yet. Create an invite link below.</p>
+              <p className="text-sm muted">No one reports to you yet. Add someone below, or add a sample employee to see how this page looks.</p>
             ) : (
               <ul className="grid gap-3">
                 {data.members.map((m) => <MemberCard key={m.id} m={m} week={data.week.start} />)}

@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
   mentor_name TEXT NOT NULL DEFAULT '', mentor_contact TEXT NOT NULL DEFAULT '',
   reports_to INTEGER REFERENCES users(id),
   is_manager INTEGER NOT NULL DEFAULT 0,
+  is_demo INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS items (
@@ -40,9 +41,6 @@ CREATE INDEX IF NOT EXISTS items_owner ON items(owner_id);
 CREATE TRIGGER IF NOT EXISTS items_planned_day_immutable
 BEFORE UPDATE OF planned_day ON items
 BEGIN SELECT RAISE(ABORT, 'planned_day is immutable'); END;
--- Items are never deleted.
-CREATE TRIGGER IF NOT EXISTS items_no_delete BEFORE DELETE ON items
-BEGIN SELECT RAISE(ABORT, 'items cannot be deleted'); END;
 CREATE TABLE IF NOT EXISTS answers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   item_id INTEGER NOT NULL UNIQUE REFERENCES items(id),
@@ -59,6 +57,7 @@ CREATE TABLE IF NOT EXISTS invites (
   manager_id INTEGER NOT NULL REFERENCES users(id),
   token_hash TEXT NOT NULL UNIQUE, label TEXT NOT NULL DEFAULT '',
   make_manager INTEGER NOT NULL DEFAULT 0,
+  contact TEXT NOT NULL DEFAULT '', sent_at TEXT, sent_via TEXT, send_error TEXT NOT NULL DEFAULT '',
   used_by INTEGER REFERENCES users(id), used_at TEXT, revoked_at TEXT,
   expires_at TEXT NOT NULL, created_at TEXT NOT NULL
 );
@@ -77,6 +76,22 @@ if (!userCols.includes('is_manager')) {
   db.exec('UPDATE users SET is_manager = 1 WHERE id = (SELECT MIN(id) FROM users)'); // the existing owner becomes a manager
 }
 
+if (!userCols.includes('is_demo')) db.exec('ALTER TABLE users ADD COLUMN is_demo INTEGER NOT NULL DEFAULT 0');
+const inviteCols = db.prepare('PRAGMA table_info(invites)').all().map((c) => c.name);
+if (!inviteCols.includes('contact')) {
+  db.exec("ALTER TABLE invites ADD COLUMN contact TEXT NOT NULL DEFAULT ''");
+  db.exec('ALTER TABLE invites ADD COLUMN sent_at TEXT');
+  db.exec('ALTER TABLE invites ADD COLUMN sent_via TEXT');
+  db.exec("ALTER TABLE invites ADD COLUMN send_error TEXT NOT NULL DEFAULT ''");
+}
+// Items are never deleted, except the removable sample employee's items (users.is_demo = 1).
+db.exec(`
+DROP TRIGGER IF EXISTS items_no_delete;
+CREATE TRIGGER items_no_delete BEFORE DELETE ON items
+WHEN COALESCE((SELECT is_demo FROM users WHERE id = OLD.owner_id), 0) = 0
+BEGIN SELECT RAISE(ABORT, 'items cannot be deleted'); END;
+`);
+
 const now = () => new Date().toISOString();
 const sid = (v) => String(v);
 
@@ -84,7 +99,7 @@ const userOut = (r) =>
   r && {
     id: sid(r.id), name: r.name, role: r.role, email: r.email, passwordHash: r.password_hash,
     mentorName: r.mentor_name, mentorContact: r.mentor_contact, createdAt: r.created_at,
-    isManager: !!r.is_manager, reportsTo: r.reports_to == null ? null : sid(r.reports_to),
+    isManager: !!r.is_manager, isDemo: !!r.is_demo, reportsTo: r.reports_to == null ? null : sid(r.reports_to),
   };
 
 const itemOut = (r) =>
@@ -116,9 +131,9 @@ const users = {
   first: () => userOut(db.prepare('SELECT * FROM users ORDER BY id LIMIT 1').get()),
   byId: (id) => userOut(db.prepare('SELECT * FROM users WHERE id = ?').get(Number(id))),
   byEmail: (email) => userOut(db.prepare('SELECT * FROM users WHERE email = ?').get(email)),
-  create: ({ name, role, email, passwordHash, isManager = false, reportsTo = null }) => {
-    const r = db.prepare('INSERT INTO users (name, role, email, password_hash, is_manager, reports_to, created_at) VALUES (?,?,?,?,?,?,?)')
-      .run(name, role || '', email, passwordHash, isManager ? 1 : 0, reportsTo == null ? null : Number(reportsTo), now());
+  create: ({ name, role, email, passwordHash, isManager = false, reportsTo = null, isDemo = false }) => {
+    const r = db.prepare('INSERT INTO users (name, role, email, password_hash, is_manager, is_demo, reports_to, created_at) VALUES (?,?,?,?,?,?,?,?)')
+      .run(name, role || '', email, passwordHash, isManager ? 1 : 0, isDemo ? 1 : 0, reportsTo == null ? null : Number(reportsTo), now());
     return users.byId(r.lastInsertRowid);
   },
   update: (id, fields) => { update('users', USER_COLS, id, fields, false); return users.byId(id); },
@@ -142,8 +157,9 @@ const items = {
   update: (id, fields) => { update('items', ITEM_COLS, id, fields, true); return items.get(id); },
   dueForReminder: (cutoffIso) =>
     db.prepare(
-      `SELECT * FROM items WHERE status = 'delivered' AND asked_at IS NOT NULL AND asked_at <= ?
-       AND answered_at IS NULL AND reminder_sent_at IS NULL`
+      `SELECT i.* FROM items i JOIN users u ON u.id = i.owner_id
+       WHERE i.status = 'delivered' AND i.asked_at IS NOT NULL AND i.asked_at <= ?
+       AND i.answered_at IS NULL AND i.reminder_sent_at IS NULL AND u.is_demo = 0`
     ).all(cutoffIso).map(itemOut),
   // Atomic claim: only one caller can ever win, so an item gets at most one reminder.
   claimReminder: (id) =>
@@ -201,14 +217,19 @@ const DAY = 24 * 60 * 60 * 1000;
 const inviteOut = (r) =>
   r && {
     id: sid(r.id), managerId: sid(r.manager_id), label: r.label, makeManager: !!r.make_manager,
+    contact: r.contact, sentAt: r.sent_at, sentVia: r.sent_via, sendError: r.send_error,
     usedBy: r.used_by == null ? null : sid(r.used_by), usedAt: r.used_at, revokedAt: r.revoked_at,
     expiresAt: r.expires_at, createdAt: r.created_at,
   };
 
 const invites = {
-  create: (managerId, tokenHash, { label = '', makeManager = false } = {}) => {
-    const r = db.prepare('INSERT INTO invites (manager_id, token_hash, label, make_manager, expires_at, created_at) VALUES (?,?,?,?,?,?)')
-      .run(Number(managerId), tokenHash, label, makeManager ? 1 : 0, new Date(Date.now() + 7 * DAY).toISOString(), now());
+  get: (id, managerId) =>
+    inviteOut(db.prepare('SELECT * FROM invites WHERE id = ? AND manager_id = ?').get(Number(id), Number(managerId))),
+  setSent: (id, { sentAt = null, sentVia = null, sendError = '' }) =>
+    db.prepare('UPDATE invites SET sent_at = ?, sent_via = ?, send_error = ? WHERE id = ?').run(sentAt, sentVia, sendError, Number(id)),
+  create: (managerId, tokenHash, { label = '', makeManager = false, contact = '' } = {}) => {
+    const r = db.prepare('INSERT INTO invites (manager_id, token_hash, label, make_manager, contact, expires_at, created_at) VALUES (?,?,?,?,?,?,?)')
+      .run(Number(managerId), tokenHash, label, makeManager ? 1 : 0, contact, new Date(Date.now() + 7 * DAY).toISOString(), now());
     return inviteOut(db.prepare('SELECT * FROM invites WHERE id = ?').get(r.lastInsertRowid));
   },
   // Only a link that is unused, not revoked and not expired can be used to join.
@@ -226,6 +247,20 @@ const invites = {
       .run(now(), Number(id), Number(managerId)).changes === 1,
 };
 
+// Removes a sample employee and everything they own. Refuses to touch real users.
+function removeDemoUser(userId) {
+  const u = users.byId(userId);
+  if (!u || !u.isDemo) throw new Error('not a sample user');
+  const ids = db.prepare('SELECT id FROM items WHERE owner_id = ?').all(Number(userId)).map((r) => r.id);
+  for (const id of ids) {
+    db.prepare('DELETE FROM answers WHERE item_id = ?').run(id);
+    db.prepare('DELETE FROM answer_tokens WHERE item_id = ?').run(id);
+    db.prepare('DELETE FROM items WHERE id = ?').run(id);
+  }
+  db.prepare('DELETE FROM share_links WHERE owner_id = ?').run(Number(userId));
+  db.prepare('DELETE FROM users WHERE id = ?').run(Number(userId));
+}
+
 function tx(fn) {
   db.exec('BEGIN IMMEDIATE');
   try {
@@ -238,4 +273,4 @@ function tx(fn) {
   }
 }
 
-module.exports = { db, users, items, answers, tokens, share, invites, tx };
+module.exports = { db, users, items, answers, tokens, share, invites, tx, removeDemoUser };

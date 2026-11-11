@@ -17,7 +17,9 @@ A mentor or manager opens a read-only link and sees what you are doing today and
 - Every user has a **My desk** tab (planning, delivering, settings). Managers also get a **Team** tab.
 - **Team** shows one card per direct report: today's plan, delivered and late items, their weekly hero sentence and the three numbers, plus a team roll-up using the same formulas. People are listed alphabetically, never ranked. Open a card for that person's full week, read-only.
 - A manager can only read their own direct reports. They can't change, ask about or drop anyone's items. Receivers' Slack handles and emails are never shown to managers.
-- **Joining:** a manager creates an invite link (works once, expires after 7 days, stored hashed). The person opens it and picks their own password. An invite can also make the new person a manager.
+- **Joining:** a manager enters the person's name and Slack @name or email. The server sends the invite link there through a viaSocket flow (`VIASOCKET_INVITE_WEBHOOK_URL`); if that isn't set up or fails, the page says so and shows the link to copy. The link works once, expires after 7 days and is stored hashed, so "Send again" replaces it with a fresh one. An invite can also make the new person a manager.
+- **Employees see who their manager is:** on the join page, in their header, and in a note on their desk that lists exactly what the manager can and can't see.
+- **Sample employee:** the Team tab has "Add a sample employee" to show a filled-in dashboard. It is flagged as sample data, never sends reminders, and "Remove sample data" deletes it completely.
 - **Upgrading an existing database:** the schema change only adds columns and tables. The existing owner becomes a manager and all data stays as it is.
 - `/api/today` and `/api/digest` accept `?user=<email or id>` for per-person flows. Without it they report the first account.
 
@@ -145,6 +147,12 @@ Create these in viaSocket (https://viasocket.com). Flow 1 is required; the other
 5. Publish the flow.
 
 The same flow is used for the one reminder after 2 days with no answer (`"isReminder": true`).
+
+### 1b. Team invite flow (optional)
+
+1. New flow, trigger **Webhook**. Copy its URL into `VIASOCKET_INVITE_WEBHOOK_URL`.
+2. The server sends `{ "kind": "invite", "channel": "slack" | "email", "to": "@rahul", "receiverName": "Rahul Verma", "managerName": "Meera", "joinUrl": "https://.../join/<token>", "expiresAt": "...", "isManager": false }`.
+3. Add a Condition on `channel`, then **Slack → Send message** (to `to`) or **Gmail → Send email** (to `to`) with a message such as: "Hi {receiverName}, {managerName} invited you to Did it help? Create your account here: {joinUrl} (the link works once and expires in 7 days)." Insert the fields with the variable picker.
 
 ### 2. 10:00 weekdays — "What will you deliver today?"
 

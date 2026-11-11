@@ -84,6 +84,7 @@ function buildTeamSummary(manager, weekParam) {
         name: member.name,
         role: member.role,
         isManager: member.isManager,
+        isDemo: member.isDemo,
         hero: scoring.heroSentence(member.name, score, today),
         numbers: { impact: score.impact, reliability: score.reliability, answerRate: score.answerRate },
         today: {

@@ -7,6 +7,7 @@ import WeekNav from '../components/WeekNav.jsx';
 import PlanForm from '../components/PlanForm.jsx';
 import SettingsPanel from '../components/SettingsPanel.jsx';
 import AppShell from '../components/AppShell.jsx';
+import ManagerNote from '../components/ManagerNote.jsx';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -31,6 +32,7 @@ export default function Dashboard() {
 
   return (
     <AppShell actions={data && <WeekNav week={data.week} today={data.today} onChange={goTo} />}>
+      <ManagerNote />
       {error && <p role="alert" className="text-red-700 dark:text-red-400">{error}</p>}
       {!data && !error && <p className="muted">Loading…</p>}
       {data && (

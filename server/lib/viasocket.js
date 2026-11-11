@@ -49,9 +49,9 @@ function messageText(item, owner, links) {
 }
 
 // Returns { ok, channel, error }. ok is true only for a 2xx response.
-async function postToViaSocket(payload) {
-  const url = process.env.VIASOCKET_ASK_WEBHOOK_URL;
-  if (!url) return { ok: false, channel: payload.channel, error: 'The viaSocket webhook is not configured on the server.' };
+async function postToViaSocket(payload, envName = 'VIASOCKET_ASK_WEBHOOK_URL') {
+  const url = process.env[envName];
+  if (!url) return { ok: false, channel: payload.channel, error: `The viaSocket webhook (${envName}) is not set up on the server.` };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10000);
   try {
@@ -76,4 +76,21 @@ async function sendAsk(item, owner, isReminder = false) {
   return postToViaSocket(buildPayload(item, owner, links, isReminder));
 }
 
-module.exports = { appUrl, channelFor, createAnswerLinks, messageText, sendAsk };
+// Sends a team invite link to the new person's Slack or email through a separate viaSocket flow.
+async function sendInvite({ contact, name, managerName, joinUrl, expiresAt, makeManager }) {
+  return postToViaSocket(
+    {
+      kind: 'invite',
+      channel: channelFor(contact),
+      to: contact.trim(),
+      receiverName: name || '',
+      managerName,
+      joinUrl,
+      expiresAt,
+      isManager: !!makeManager,
+    },
+    'VIASOCKET_INVITE_WEBHOOK_URL'
+  );
+}
+
+module.exports = { appUrl, channelFor, createAnswerLinks, messageText, sendAsk, sendInvite };
