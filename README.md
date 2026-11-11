@@ -25,7 +25,7 @@ A mentor or manager opens a read-only link and sees what you are doing today and
 
 ### Look and feel
 
-Cherry red and cream, with Fraunces (headings and big numbers), DM Sans (text) and DM Mono (small labels), all bundled with the app so nothing loads from a font CDN. Light and dark mode. Signed-in pages use a sidebar: **My desk**, **Team** and **Integrations** (managers), and **Settings**. The **Integrations** page shows whether the ask and invite webhooks are set up, the routine flow URLs to copy, and the saved viaSocket project. It never shows secrets.
+A blue palette (Blue Gray #88A9C3, Midnight Blue #2B4257, Navy Blue #14202E, Royal Blue #091235, plus pale tints of Blue Gray for light surfaces), with Fraunces (headings and big numbers), DM Sans (text) and DM Mono (small labels), all bundled with the app so nothing loads from a font CDN. Light and dark mode. Signed-in pages use a sidebar: **My desk**, **Team** and **Integrations** (managers), and **Settings**. The **Integrations** page shows whether the ask and invite webhooks are set up, the routine flow URLs to copy, and the saved viaSocket project. It never shows secrets.
 
 ### Scoring (per week, Monday to Sunday) — all in `server/lib/scoring.js`
 

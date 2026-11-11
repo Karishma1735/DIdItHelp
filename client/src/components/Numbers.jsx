@@ -6,8 +6,8 @@ function Ring({ value }) {
   const filled = value === null || value === undefined ? 0 : (value / 100) * c;
   return (
     <svg viewBox="0 0 64 64" className="h-16 w-16 shrink-0 -rotate-90" aria-hidden="true">
-      <circle cx="32" cy="32" r={r} fill="none" strokeWidth="7" className="stroke-cream-300 dark:stroke-wine-700" />
-      <circle cx="32" cy="32" r={r} fill="none" strokeWidth="7" strokeLinecap="round" strokeDasharray={`${filled} ${c}`} className="stroke-cherry-600 dark:stroke-cherry-400" />
+      <circle cx="32" cy="32" r={r} fill="none" strokeWidth="7" className="stroke-mist-300 dark:stroke-ink-700" />
+      <circle cx="32" cy="32" r={r} fill="none" strokeWidth="7" strokeLinecap="round" strokeDasharray={`${filled} ${c}`} className="stroke-steel-600 dark:stroke-steel-400" />
     </svg>
   );
 }
@@ -32,7 +32,7 @@ export default function Numbers({ numbers }) {
     <div className="grid gap-4 sm:grid-cols-3">
       <Stat
         label="Impact"
-        value={<>{numbers.impact}<span className="ml-1 text-xl font-medium text-wine-500">pts</span></>}
+        value={<>{numbers.impact}<span className="ml-1 text-xl font-medium text-ink-500">pts</span></>}
         note={numbers.explanations.impact}
       />
       <Stat label="Reliability" value={pct(numbers.reliability)} note={numbers.explanations.reliability} visual={<Ring value={numbers.reliability} />} />

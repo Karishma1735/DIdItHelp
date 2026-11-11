@@ -1,20 +1,18 @@
-export function CherryMark({ className = 'h-8 w-8', leaf = '#9DBB5A' }) {
+// Speech bubble with a check mark: "did it help?" answered yes.
+export function BrandMark({ className = 'h-8 w-8', variant = 'default' }) {
+  const check = variant === 'light' ? 'stroke-steel-700' : 'stroke-mist-50 dark:stroke-steel-700';
   return (
     <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
-      <path d="M16 5c-1 5-3 8-6 13M16 5c1 5 3 8 6 13" stroke={leaf} strokeWidth="1.8" fill="none" strokeLinecap="round" />
-      <path d="M16 5c3-2 7-2 10 1-3 2-7 2-10-1z" fill={leaf} />
-      <circle cx="10" cy="22" r="6" fill="currentColor" />
-      <circle cx="22" cy="21" r="6" fill="currentColor" opacity=".82" />
-      <circle cx="8.3" cy="20" r="1.5" fill="#fff" opacity=".45" />
-      <circle cx="20.3" cy="19" r="1.5" fill="#fff" opacity=".45" />
+      <path d="M6 5h20a3 3 0 0 1 3 3v13a3 3 0 0 1-3 3H15.5L9 29.5V24H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z" fill="currentColor" />
+      <path d="M10 14.8l4 4 8-8.3" fill="none" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className={check} />
     </svg>
   );
 }
 
 export default function Brand({ light = false, size = 'text-xl' }) {
   return (
-    <span className={`inline-flex items-center gap-2 ${light ? 'text-cream-50' : 'text-cherry-800 dark:text-cream-50'}`}>
-      <CherryMark className="h-8 w-8" leaf={light ? '#C9E08A' : '#6B8A33'} />
+    <span className={`inline-flex items-center gap-2 ${light ? 'text-mist-50' : 'text-steel-700 dark:text-mist-50'}`}>
+      <BrandMark className="h-8 w-8" variant={light ? 'light' : 'default'} />
       <span className={`font-display font-semibold italic tracking-tight ${size}`}>Did it help?</span>
     </span>
   );

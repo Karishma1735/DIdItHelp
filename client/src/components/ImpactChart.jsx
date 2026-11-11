@@ -22,7 +22,7 @@ export default function ImpactChart({ weeks, activeStart, onOpen }) {
               <span className="font-mono text-[10px] muted">{w.impact}</span>
               <span
                 style={{ height: `${h}%` }}
-                className={`w-full rounded-t-md transition ${active ? 'bg-cherry-600 dark:bg-cherry-400' : 'bg-cherry-200 group-hover:bg-cherry-300 dark:bg-wine-700 dark:group-hover:bg-wine-600'}`}
+                className={`w-full rounded-t-md transition ${active ? 'bg-steel-600 dark:bg-steel-400' : 'bg-steel-200 group-hover:bg-steel-300 dark:bg-ink-700 dark:group-hover:bg-ink-600'}`}
               />
             </button>
           );

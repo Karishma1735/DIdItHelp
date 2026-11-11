@@ -52,7 +52,7 @@ export default function SettingsPanel() {
         </div>
       </form>
 
-      <div className="space-y-2 border-t border-wine-200 pt-4 dark:border-wine-800">
+      <div className="space-y-2 border-t border-ink-200 pt-4 dark:border-ink-800">
         <h3 className="font-semibold">Manager share link</h3>
         <p className="text-sm muted">A read-only page for your manager or mentor. Creating a new link revokes the old one. The link is shown once, so copy it now.</p>
         {share.url && (

@@ -3,8 +3,8 @@ import { formatDay } from '../dates.js';
 
 function Group({ title, items, empty, showDay, tone }) {
   return (
-    <div className={`rounded-xl p-3 ${tone || 'bg-cream-100 dark:bg-wine-950/60'}`}>
-      <h3 className="mb-2 font-sans text-xs font-bold uppercase tracking-wide text-wine-600 dark:text-wine-400">{title}</h3>
+    <div className={`rounded-xl p-3 ${tone || 'bg-mist-100 dark:bg-ink-950/60'}`}>
+      <h3 className="mb-2 font-sans text-xs font-bold uppercase tracking-wide text-ink-600 dark:text-ink-400">{title}</h3>
       {items.length === 0 ? (
         <p className="text-sm muted">{empty}</p>
       ) : (
@@ -33,7 +33,7 @@ export default function TodaySection({ today, section }) {
       <div className="grid gap-3 md:grid-cols-3">
         <Group title="Planned for today" items={section.planned} empty="Nothing planned for today yet." />
         <Group title="Delivered today" items={section.deliveredToday} empty="Nothing delivered yet today." />
-        <Group title="Late" items={section.late} empty="Nothing is late." showDay tone={section.late.length ? 'bg-cherry-50 dark:bg-cherry-950/50' : undefined} />
+        <Group title="Late" items={section.late} empty="Nothing is late." showDay tone={section.late.length ? 'bg-red-50 dark:bg-red-950/40' : undefined} />
       </div>
     </section>
   );

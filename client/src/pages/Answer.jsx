@@ -6,7 +6,7 @@ import api, { errorMessage } from '../api';
 const OPTIONS = [
   { value: 'lot', label: 'Helped a lot', cls: 'bg-leaf-700 text-white hover:bg-leaf-800' },
   { value: 'little', label: 'Helped a little', cls: 'bg-[#8A7A18] text-white hover:bg-[#6F6212]' },
-  { value: 'none', label: 'Didn’t help', cls: 'bg-wine-600 text-white hover:bg-wine-700' },
+  { value: 'none', label: 'Didn’t help', cls: 'bg-ink-600 text-white hover:bg-ink-700' },
 ];
 const LABEL = Object.fromEntries(OPTIONS.map((o) => [o.value, o.label]));
 
@@ -73,7 +73,7 @@ export default function Answer() {
       <p className="eyebrow">{info.ownerName} delivered</p>
       <h1 className="mt-1 text-3xl font-semibold">“{info.what}”</h1>
       <p className="mt-3 text-sm">
-        Proof: <a className="break-all text-cherry-800 underline dark:text-cherry-400" href={info.proofUrl} target="_blank" rel="noreferrer noopener">{info.proofUrl}</a>
+        Proof: <a className="break-all text-steel-800 underline dark:text-steel-400" href={info.proofUrl} target="_blank" rel="noreferrer noopener">{info.proofUrl}</a>
       </p>
 
       {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-300">{error}</p>}

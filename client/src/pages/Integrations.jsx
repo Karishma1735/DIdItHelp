@@ -5,8 +5,8 @@ import AppShell from '../components/AppShell.jsx';
 
 function Pill({ ok, yes = 'Connected', no = 'Not set up' }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${ok ? 'bg-leaf-100 text-leaf-800 dark:bg-leaf-800/40 dark:text-leaf-300' : 'bg-cherry-100 text-cherry-800 dark:bg-cherry-950 dark:text-cherry-200'}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${ok ? 'bg-leaf-600' : 'bg-cherry-600'}`} />
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${ok ? 'bg-leaf-100 text-leaf-800 dark:bg-leaf-800/40 dark:text-leaf-300' : 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200'}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${ok ? 'bg-leaf-600' : 'bg-amber-600'}`} />
       {ok ? yes : no}
     </span>
   );
@@ -27,7 +27,7 @@ function Copy({ text }) {
 const Fields = ({ list }) => (
   <p className="flex flex-wrap gap-1.5">
     {list.map((f) => (
-      <code key={f} className="rounded bg-cream-200 px-1.5 py-0.5 font-mono text-[11px] dark:bg-wine-800">{f}</code>
+      <code key={f} className="rounded bg-mist-200 px-1.5 py-0.5 font-mono text-[11px] dark:bg-ink-800">{f}</code>
     ))}
   </p>
 );
@@ -84,10 +84,10 @@ export default function Integrations() {
               {d.routines.items.map((r) => (
                 <article key={r.id} className="card space-y-2">
                   <h3 className="text-lg font-semibold">{r.name}</h3>
-                  <p className="font-mono text-xs uppercase tracking-wider text-cherry-800 dark:text-cherry-300">{r.when}</p>
+                  <p className="font-mono text-xs uppercase tracking-wider text-steel-800 dark:text-steel-300">{r.when}</p>
                   <p className="text-sm">Sends <code className="font-mono text-xs">{r.send}</code> to {r.to}.</p>
                   <div className="flex items-center gap-2">
-                    <code className="min-w-0 flex-1 truncate rounded bg-cream-200 px-2 py-1 font-mono text-[11px] dark:bg-wine-800" title={r.url}>{r.url}</code>
+                    <code className="min-w-0 flex-1 truncate rounded bg-mist-200 px-2 py-1 font-mono text-[11px] dark:bg-ink-800" title={r.url}>{r.url}</code>
                     <Copy text={r.url} />
                   </div>
                   <p className="text-xs muted">Schedule: <code className="font-mono">{r.cron}</code></p>

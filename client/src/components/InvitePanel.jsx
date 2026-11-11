@@ -75,7 +75,7 @@ export default function InvitePanel() {
       {error && <p role="alert" className="text-sm text-red-700 dark:text-red-400">{error}</p>}
 
       {result && (
-        <div className="space-y-2 rounded-lg bg-wine-100 p-3 dark:bg-wine-800">
+        <div className="space-y-2 rounded-lg bg-ink-100 p-3 dark:bg-ink-800">
           {result.sent?.ok && (
             <p className="text-sm font-medium text-leaf-700 dark:text-leaf-300">Invite sent on {where(result.sent.channel)}.</p>
           )}
@@ -93,7 +93,7 @@ export default function InvitePanel() {
       )}
 
       {invites.length > 0 && (
-        <ul className="divide-y divide-wine-200 text-sm dark:divide-wine-800">
+        <ul className="divide-y divide-ink-200 text-sm dark:divide-ink-800">
           {invites.map((i) => (
             <li key={i.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
               <span>

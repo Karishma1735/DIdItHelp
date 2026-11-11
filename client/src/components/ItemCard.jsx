@@ -64,7 +64,7 @@ export default function ItemCard({ item, readOnly, onChange }) {
 
       {item.proofUrl && (
         <p className="text-sm">
-          Proof: <a className="break-all text-cherry-800 underline dark:text-cherry-400" href={item.proofUrl} target="_blank" rel="noreferrer noopener">{item.proofUrl}</a>
+          Proof: <a className="break-all text-steel-800 underline dark:text-steel-400" href={item.proofUrl} target="_blank" rel="noreferrer noopener">{item.proofUrl}</a>
         </p>
       )}
       {item.askedAt && (
@@ -75,7 +75,7 @@ export default function ItemCard({ item, readOnly, onChange }) {
         </p>
       )}
       {item.answer?.comment && (
-        <blockquote className="border-l-4 border-cherry-600 pl-3 text-sm italic">“{item.answer.comment}”</blockquote>
+        <blockquote className="border-l-4 border-steel-600 pl-3 text-sm italic">“{item.answer.comment}”</blockquote>
       )}
       {item.askError && (
         <p role="alert" className="rounded-lg bg-red-50 p-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-300">
@@ -103,7 +103,7 @@ export default function ItemCard({ item, readOnly, onChange }) {
       )}
 
       {!readOnly && proofOpen && (
-        <form onSubmit={deliver} className="space-y-2 rounded-lg bg-wine-100 p-3 dark:bg-wine-800">
+        <form onSubmit={deliver} className="space-y-2 rounded-lg bg-ink-100 p-3 dark:bg-ink-800">
           <label className="label" htmlFor={`proof-${item.id}`}>Proof link (PR, live flow or doc). No proof, no delivery.</label>
           <input id={`proof-${item.id}`} className="input" type="url" required placeholder="https://" value={proof} onChange={(e) => setProof(e.target.value)} autoFocus />
           <div className="flex gap-2">

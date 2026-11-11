@@ -30,7 +30,7 @@ function Line({ title, items }) {
 
 function Mini({ label, value }) {
   return (
-    <div className="rounded-lg bg-cream-100 px-3 py-2 dark:bg-wine-950/60">
+    <div className="rounded-lg bg-mist-100 px-3 py-2 dark:bg-ink-950/60">
       <p className="font-mono text-[10px] uppercase tracking-wider muted">{label}</p>
       <p className="font-display text-2xl font-semibold leading-none">{value}</p>
     </div>
@@ -41,9 +41,9 @@ function MemberCard({ m, week }) {
   const quiet = !m.today.planned.length && !m.today.deliveredToday.length && !m.today.late.length;
   return (
     <li>
-      <Link to={`/team/${m.id}?week=${week}`} className="card block space-y-4 transition hover:-translate-y-0.5 hover:border-cherry-400">
+      <Link to={`/team/${m.id}?week=${week}`} className="card block space-y-4 transition hover:-translate-y-0.5 hover:border-steel-400">
         <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-cherry-600 font-display text-lg font-semibold text-cream-50">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-steel-600 font-display text-lg font-semibold text-mist-50">
             {m.name.trim()[0]?.toUpperCase()}
           </span>
           <div className="min-w-0 flex-1">
@@ -54,7 +54,7 @@ function MemberCard({ m, week }) {
             </h3>
             <p className="text-sm muted">{m.role}</p>
           </div>
-          <span className="text-cherry-600 dark:text-cherry-300" aria-hidden="true">→</span>
+          <span className="text-steel-600 dark:text-steel-300" aria-hidden="true">→</span>
         </div>
         <p className="font-display text-lg leading-snug">{m.hero}</p>
         <div className="grid grid-cols-3 gap-2">
@@ -62,7 +62,7 @@ function MemberCard({ m, week }) {
           <Mini label="Reliability" value={pct(m.numbers.reliability)} />
           <Mini label="Answers" value={pct(m.numbers.answerRate)} />
         </div>
-        <div className="space-y-2 border-t border-cream-300 pt-3 dark:border-wine-800">
+        <div className="space-y-2 border-t border-mist-300 pt-3 dark:border-ink-800">
           <p className="text-sm font-semibold">Today</p>
           {quiet && <p className="text-sm muted">Nothing planned or delivered today.</p>}
           <Line title="Late" items={m.today.late} />

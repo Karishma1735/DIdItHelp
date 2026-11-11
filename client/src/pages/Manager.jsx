@@ -35,10 +35,10 @@ export default function Manager() {
   const goTo = (w) => setParams(w ? { week: w } : {});
   return (
     <div>
-      <div className="bg-cherry-700 px-4 py-3 text-cream-50 dark:bg-cherry-900 sm:px-8">
+      <div className="bg-steel-700 px-4 py-3 text-mist-50 dark:bg-steel-900 sm:px-8">
         <div className="mx-auto flex max-w-5xl items-center justify-between">
           <Brand light />
-          <ThemeToggle className="border-white/25 text-cream-50 hover:bg-white/10" />
+          <ThemeToggle className="border-white/25 text-mist-50 hover:bg-white/10" />
         </div>
       </div>
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-8 sm:py-8">

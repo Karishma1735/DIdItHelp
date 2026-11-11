@@ -31,21 +31,21 @@ function useNav() {
 
 const side = ({ isActive }) =>
   `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-    isActive ? 'bg-cream-50 text-cherry-800 shadow-sm' : 'text-cream-100/90 hover:bg-white/10'
+    isActive ? 'bg-mist-50 text-steel-800 shadow-sm' : 'text-mist-100/90 hover:bg-white/10'
   }`;
 const pill = ({ isActive }) =>
   `flex shrink-0 items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium ${
-    isActive ? 'bg-cherry-700 text-cream-50 dark:bg-cherry-500' : 'bg-cream-200 text-wine-800 dark:bg-wine-800 dark:text-cream-100'
+    isActive ? 'bg-steel-700 text-mist-50 dark:bg-steel-500' : 'bg-mist-200 text-ink-800 dark:bg-ink-800 dark:text-mist-100'
   }`;
 
-// Signed-in layout: cherry sidebar on desktop, brand bar and pill nav on mobile.
+// Signed-in layout: blue sidebar on desktop, brand bar and pill nav on mobile.
 export default function AppShell({ eyebrow, title, actions, children }) {
   const { user, signOut } = useAuth();
   const nav = useNav();
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[250px_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-screen flex-col justify-between overflow-hidden bg-cherry-700 p-5 text-cream-50 dark:bg-cherry-900 lg:flex">
-        <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-cherry-600/50 dark:bg-cherry-800/60" />
+      <aside className="sticky top-0 hidden h-screen flex-col justify-between overflow-hidden bg-steel-700 p-5 text-mist-50 dark:bg-steel-900 lg:flex">
+        <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-steel-600/50 dark:bg-steel-800/60" />
         <div className="relative space-y-8">
           <Brand light size="text-2xl" />
           <nav className="space-y-1" aria-label="Sections">
@@ -59,23 +59,23 @@ export default function AppShell({ eyebrow, title, actions, children }) {
         <div className="relative space-y-3">
           <div className="rounded-xl bg-black/15 p-3">
             <p className="font-display text-lg font-semibold leading-tight">{user.name}</p>
-            <p className="text-xs text-cream-100/80">{user.role || 'No role yet'}</p>
-            {user.managerName && <p className="mt-1 font-mono text-[11px] text-cream-100/70">reports to {user.managerName}</p>}
+            <p className="text-xs text-mist-100/80">{user.role || 'No role yet'}</p>
+            {user.managerName && <p className="mt-1 font-mono text-[11px] text-mist-100/70">reports to {user.managerName}</p>}
           </div>
           <div className="flex gap-2">
-            <ThemeToggle className="flex-1 border-white/25 text-cream-50 hover:bg-white/10" />
-            <button className="btn-ghost flex-1 border-white/25 text-cream-50 hover:bg-white/10" onClick={signOut}>Sign out</button>
+            <ThemeToggle className="flex-1 border-white/25 text-mist-50 hover:bg-white/10" />
+            <button className="btn-ghost flex-1 border-white/25 text-mist-50 hover:bg-white/10" onClick={signOut}>Sign out</button>
           </div>
         </div>
       </aside>
 
       <div className="min-w-0">
-        <div className="bg-cherry-700 px-4 py-3 text-cream-50 dark:bg-cherry-900 lg:hidden">
+        <div className="bg-steel-700 px-4 py-3 text-mist-50 dark:bg-steel-900 lg:hidden">
           <div className="flex items-center justify-between">
             <Brand light />
             <div className="flex gap-2">
-              <ThemeToggle className="border-white/25 text-cream-50 hover:bg-white/10" />
-              <button className="btn-ghost border-white/25 text-cream-50 hover:bg-white/10" onClick={signOut}>Sign out</button>
+              <ThemeToggle className="border-white/25 text-mist-50 hover:bg-white/10" />
+              <button className="btn-ghost border-white/25 text-mist-50 hover:bg-white/10" onClick={signOut}>Sign out</button>
             </div>
           </div>
         </div>

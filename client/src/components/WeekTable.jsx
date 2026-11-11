@@ -22,7 +22,7 @@ export default function WeekTable({ weeks, activeStart, onOpen }) {
             <tr
               key={w.weekStart}
               onClick={() => onOpen(w.weekStart)}
-              className={`cursor-pointer border-t border-wine-200 hover:bg-wine-100 dark:border-wine-800 dark:hover:bg-wine-800 ${w.weekStart === activeStart ? 'bg-cherry-50 dark:bg-cherry-950/40' : ''}`}
+              className={`cursor-pointer border-t border-ink-200 hover:bg-ink-100 dark:border-ink-800 dark:hover:bg-ink-800 ${w.weekStart === activeStart ? 'bg-steel-50 dark:bg-steel-950/40' : ''}`}
             >
               <td className="py-2 pr-3 font-medium">{formatDay(w.weekStart, { day: 'numeric', month: 'short' })}</td>
               <td className="pr-3">{w.plannedCount ? `${w.deliveredOfPlanned} of ${w.plannedCount}` : '—'}</td>

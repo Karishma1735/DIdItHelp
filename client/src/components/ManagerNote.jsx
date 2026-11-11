@@ -5,7 +5,7 @@ export default function ManagerNote() {
   const { user } = useAuth();
   if (!user.managerName) return null;
   return (
-    <section className="card border-cherry-600/40 bg-cherry-50 dark:bg-cherry-950/30" aria-label="Your manager">
+    <section className="card border-steel-600/40 bg-steel-50 dark:bg-steel-950/30" aria-label="Your manager">
       <p className="text-sm font-semibold">Your manager is {user.managerName}</p>
       <p className="mt-1 text-sm muted">
         {user.managerName} can see your daily plan, what you delivered with its proof link, receivers’ answers and comments, and your weekly numbers.
