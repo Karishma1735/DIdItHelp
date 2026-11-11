@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import Brand from '../components/Brand.jsx';
 import api, { errorMessage } from '../api';
 
 const OPTIONS = [
-  { value: 'lot', label: 'Helped a lot', cls: 'bg-emerald-700 text-white hover:bg-emerald-800' },
-  { value: 'little', label: 'Helped a little', cls: 'bg-lime-600 text-white hover:bg-lime-700' },
-  { value: 'none', label: 'Didn’t help', cls: 'bg-stone-600 text-white hover:bg-stone-700' },
+  { value: 'lot', label: 'Helped a lot', cls: 'bg-leaf-700 text-white hover:bg-leaf-800' },
+  { value: 'little', label: 'Helped a little', cls: 'bg-[#8A7A18] text-white hover:bg-[#6F6212]' },
+  { value: 'none', label: 'Didn’t help', cls: 'bg-wine-600 text-white hover:bg-wine-700' },
 ];
 const LABEL = Object.fromEntries(OPTIONS.map((o) => [o.value, o.label]));
 
@@ -69,10 +70,10 @@ export default function Answer() {
 
   return (
     <Shell>
-      <p className="muted">{info.ownerName} delivered</p>
-      <h1 className="mt-1 text-2xl font-bold">“{info.what}”</h1>
+      <p className="eyebrow">{info.ownerName} delivered</p>
+      <h1 className="mt-1 text-3xl font-semibold">“{info.what}”</h1>
       <p className="mt-3 text-sm">
-        Proof: <a className="break-all text-emerald-700 underline dark:text-emerald-400" href={info.proofUrl} target="_blank" rel="noreferrer noopener">{info.proofUrl}</a>
+        Proof: <a className="break-all text-cherry-700 underline dark:text-cherry-400" href={info.proofUrl} target="_blank" rel="noreferrer noopener">{info.proofUrl}</a>
       </p>
 
       {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-300">{error}</p>}
@@ -85,7 +86,7 @@ export default function Answer() {
             <label className="label" htmlFor="comment">Add a comment (optional)</label>
             <textarea id="comment" className="input" rows={3} maxLength={1000} value={comment} onChange={(e) => { setComment(e.target.value); setCommentSaved(false); }} />
             <button className="btn-primary mt-2" onClick={saveComment}>Save comment</button>
-            {commentSaved && <span className="ml-3 text-sm text-emerald-700 dark:text-emerald-400">Comment saved.</span>}
+            {commentSaved && <span className="ml-3 text-sm text-leaf-700 dark:text-leaf-300">Comment saved.</span>}
           </div>
           <button className="text-sm underline" onClick={() => setChanging(true)}>Change my answer</button>
         </div>
@@ -103,5 +104,10 @@ export default function Answer() {
 }
 
 function Shell({ children }) {
-  return <main className="mx-auto max-w-md p-5 pt-10">{children}</main>;
+  return (
+    <main className="mx-auto max-w-md p-5 pt-8">
+      <div className="mb-8"><Brand /></div>
+      {children}
+    </main>
+  );
 }

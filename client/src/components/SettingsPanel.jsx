@@ -47,12 +47,12 @@ export default function SettingsPanel() {
         <div><label className="label" htmlFor="s-mc">Mentor’s contact (Slack @name or email)</label><input id="s-mc" className="input" value={form.mentorContact} onChange={set('mentorContact')} /></div>
         <div className="sm:col-span-2 flex items-center gap-3">
           <button className="btn-primary">Save settings</button>
-          {msg && <span className="text-sm text-emerald-700 dark:text-emerald-400">{msg}</span>}
+          {msg && <span className="text-sm text-leaf-700 dark:text-leaf-300">{msg}</span>}
           {error && <span role="alert" className="text-sm text-red-700 dark:text-red-400">{error}</span>}
         </div>
       </form>
 
-      <div className="space-y-2 border-t border-stone-200 pt-4 dark:border-stone-800">
+      <div className="space-y-2 border-t border-wine-200 pt-4 dark:border-wine-800">
         <h3 className="font-semibold">Manager share link</h3>
         <p className="text-sm muted">A read-only page for your manager or mentor. Creating a new link revokes the old one. The link is shown once, so copy it now.</p>
         {share.url && (

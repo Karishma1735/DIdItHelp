@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api, { errorMessage } from '../api';
 import { useAuth } from '../auth.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
+import Brand from '../components/Brand.jsx';
 
 export default function Login() {
   const { signIn } = useAuth();
@@ -38,12 +39,12 @@ export default function Login() {
 
   const register = mode === 'register';
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 p-4">
+    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-5 p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Did it help?</h1>
+        <Brand size="text-2xl" />
         <ThemeToggle />
       </div>
-      <p className="muted">Measure your work by whether it helped someone, not by how much you did.</p>
+      <p className="font-display text-2xl leading-snug">Measure your work by whether it <em className="text-cherry-700 dark:text-cherry-300">helped someone</em>, not by how much you did.</p>
       <form onSubmit={submit} className="card space-y-3">
         <h2 className="font-semibold">{register ? 'Create the owner account' : 'Sign in'}</h2>
         {register && (

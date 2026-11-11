@@ -23,16 +23,17 @@ export default function TeamMember() {
   const goTo = (w) => setParams(w ? { week: w } : {});
 
   return (
-    <AppShell actions={data && <WeekNav week={data.week} today={data.today} onChange={goTo} />}>
-      <Link to={`/team${week ? `?week=${week}` : ''}`} className="text-sm underline">← Back to the team</Link>
+    <AppShell
+      eyebrow="Team · read-only view"
+      title={data ? data.owner.name : 'Team member'}
+      actions={data && <WeekNav week={data.week} today={data.today} onChange={goTo} />}
+    >
+      <Link to={`/team${week ? `?week=${week}` : ''}`} className="link text-sm">← Back to the team</Link>
       {error && <p role="alert" className="text-red-700 dark:text-red-400">{error}</p>}
       {!data && !error && <p className="muted">Loading…</p>}
       {data && (
         <>
-          <div>
-            <h2 className="text-xl font-bold">{data.owner.name}</h2>
-            <p className="muted">{data.owner.role} · read-only view</p>
-          </div>
+          <p className="-mt-2 muted">{data.owner.role}</p>
           <WeekView data={data} readOnly onItemChange={() => {}} onOpenWeek={goTo} />
         </>
       )}

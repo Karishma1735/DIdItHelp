@@ -1,13 +1,27 @@
+@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/dm-sans';
+@import '@fontsource/dm-mono/400.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  html { font-family: 'DM Sans Variable', ui-sans-serif, system-ui, sans-serif; }
+  body { @apply bg-cream-100 text-wine-900 antialiased dark:bg-wine-950 dark:text-cream-100; }
+  h1, h2, h3, .font-display { font-family: 'Fraunces Variable', Georgia, serif; font-optical-sizing: auto; letter-spacing: -0.01em; }
+  ::selection { @apply bg-cherry-200 text-cherry-950; }
+  :focus-visible { @apply outline-2 outline-offset-2 outline-cherry-600 dark:outline-cherry-400; }
+}
+
 @layer components {
-  .card { @apply rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-stone-900 sm:p-5; }
-  .input { @apply w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 dark:border-stone-700 dark:bg-stone-950; }
-  .btn { @apply inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50; }
-  .btn-primary { @apply btn bg-emerald-700 text-white hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500; }
-  .btn-ghost { @apply btn border border-stone-300 hover:bg-stone-100 dark:border-stone-700 dark:hover:bg-stone-800; }
-  .label { @apply mb-1 block text-xs font-medium text-stone-600 dark:text-stone-400; }
-  .muted { @apply text-stone-600 dark:text-stone-400; }
+  .card { @apply rounded-2xl border border-cream-300 bg-cream-50 p-4 shadow-soft dark:border-wine-800 dark:bg-wine-900 sm:p-5; }
+  .input { @apply w-full rounded-lg border border-cream-400 bg-white/70 px-3 py-2 text-sm outline-none transition focus:border-cherry-600 focus:ring-2 focus:ring-cherry-600/20 dark:border-wine-700 dark:bg-wine-950; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply btn bg-cherry-600 text-cream-50 shadow-sm hover:bg-cherry-700 dark:bg-cherry-500 dark:hover:bg-cherry-400; }
+  .btn-ghost { @apply btn border border-cream-400 text-wine-800 hover:bg-cream-200 dark:border-wine-700 dark:text-cream-100 dark:hover:bg-wine-800; }
+  .label { @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-wine-600 dark:text-wine-400; }
+  .muted { @apply text-wine-600 dark:text-wine-400; }
+  .eyebrow { @apply font-mono text-[11px] uppercase tracking-[0.14em] text-cherry-700 dark:text-cherry-300; }
+  .link { @apply font-medium text-cherry-700 underline decoration-cherry-300 underline-offset-2 hover:decoration-cherry-600 dark:text-cherry-300; }
 }

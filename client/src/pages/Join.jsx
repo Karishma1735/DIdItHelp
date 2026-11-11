@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api, { errorMessage } from '../api';
 import { useAuth } from '../auth.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
+import Brand from '../components/Brand.jsx';
 
 export default function Join() {
   const { token } = useParams();
@@ -35,9 +36,9 @@ export default function Join() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 p-4">
+    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-5 p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Did it help?</h1>
+        <Brand size="text-2xl" />
         <ThemeToggle />
       </div>
       {invalid ? (

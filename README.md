@@ -23,6 +23,10 @@ A mentor or manager opens a read-only link and sees what you are doing today and
 - **Upgrading an existing database:** the schema change only adds columns and tables. The existing owner becomes a manager and all data stays as it is.
 - `/api/today` and `/api/digest` accept `?user=<email or id>` for per-person flows. Without it they report the first account.
 
+### Look and feel
+
+Cherry red and cream, with Fraunces (headings and big numbers), DM Sans (text) and DM Mono (small labels), all bundled with the app so nothing loads from a font CDN. Light and dark mode. Signed-in pages use a sidebar: **My desk**, **Team** and **Integrations** (managers), and **Settings**. The **Integrations** page shows whether the ask and invite webhooks are set up, the routine flow URLs to copy, and the saved viaSocket project. It never shows secrets.
+
 ### Scoring (per week, Monday to Sunday) — all in `server/lib/scoring.js`
 
 - **Impact** = sum of answers for items delivered that week: helped a lot = 2, a little = 1, didn't help = 0.
@@ -189,6 +193,7 @@ If your host sleeps, add a flow on a daily schedule that calls `GET https://<APP
 | `GET /api/manager/:token` | token | Read-only data for a share link |
 | `GET /api/team`, `/api/team/:userId/overview` | manager | Team dashboard and one report's read-only desk |
 | `GET/POST/DELETE /api/team/invites` | manager | Invite links for new team members |
+| `GET /api/integrations` | manager | Read-only viaSocket wiring status (no secrets) |
 | `GET /api/auth/invite/:token` | rate-limited | Who invited you (join page) |
 | `GET /api/today`, `/api/digest`, `/api/jobs/reminders` | `?key=DIGEST_KEY` | For viaSocket schedules |
 

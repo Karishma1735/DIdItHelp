@@ -34,6 +34,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/answer', require('./routes/answers'));
 app.use('/api/share', require('./routes/share').owner);
 app.use('/api/team', require('./routes/team'));
+app.use('/api/integrations', require('./routes/integrations'));
 app.use('/api/manager', require('./routes/share').manager);
 app.use('/api', require('./routes/daily')); // /api/today, /api/digest, /api/jobs/reminders (key protected)
 app.use('/api', require('./routes/items'));

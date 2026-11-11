@@ -5,7 +5,7 @@ const pct = (v) => (v === null ? '—' : `${v}%`);
 export default function WeekTable({ weeks, activeStart, onOpen }) {
   return (
     <section className="card overflow-x-auto">
-      <h2 className="mb-3 text-lg font-bold">Last 8 weeks</h2>
+      <h2 className="mb-3 text-xl font-semibold">Last 8 weeks</h2>
       <table className="w-full min-w-[34rem] text-left text-sm">
         <thead className="text-xs uppercase tracking-wide muted">
           <tr>
@@ -22,7 +22,7 @@ export default function WeekTable({ weeks, activeStart, onOpen }) {
             <tr
               key={w.weekStart}
               onClick={() => onOpen(w.weekStart)}
-              className={`cursor-pointer border-t border-stone-200 hover:bg-stone-100 dark:border-stone-800 dark:hover:bg-stone-800 ${w.weekStart === activeStart ? 'bg-emerald-50 dark:bg-emerald-950/40' : ''}`}
+              className={`cursor-pointer border-t border-wine-200 hover:bg-wine-100 dark:border-wine-800 dark:hover:bg-wine-800 ${w.weekStart === activeStart ? 'bg-cherry-50 dark:bg-cherry-950/40' : ''}`}
             >
               <td className="py-2 pr-3 font-medium">{formatDay(w.weekStart, { day: 'numeric', month: 'short' })}</td>
               <td className="pr-3">{w.plannedCount ? `${w.deliveredOfPlanned} of ${w.plannedCount}` : '—'}</td>

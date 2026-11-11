@@ -7,6 +7,8 @@ import Answer from './pages/Answer.jsx';
 import Team from './pages/Team.jsx';
 import TeamMember from './pages/TeamMember.jsx';
 import Join from './pages/Join.jsx';
+import Settings from './pages/Settings.jsx';
+import Integrations from './pages/Integrations.jsx';
 
 function Private({ children, manager = false }) {
   const { user, ready } = useAuth();
@@ -24,6 +26,8 @@ export default function App() {
       <Route path="/a/:token" element={<Answer />} />
       <Route path="/join/:token" element={<Join />} />
       <Route path="/" element={<Private><Dashboard /></Private>} />
+      <Route path="/settings" element={<Private><Settings /></Private>} />
+      <Route path="/integrations" element={<Private manager><Integrations /></Private>} />
       <Route path="/team" element={<Private manager><Team /></Private>} />
       <Route path="/team/:userId" element={<Private manager><TeamMember /></Private>} />
       <Route path="*" element={<Navigate to="/" replace />} />
