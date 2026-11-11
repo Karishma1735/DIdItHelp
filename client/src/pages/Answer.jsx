@@ -73,7 +73,7 @@ export default function Answer() {
       <p className="eyebrow">{info.ownerName} delivered</p>
       <h1 className="mt-1 text-3xl font-semibold">“{info.what}”</h1>
       <p className="mt-3 text-sm">
-        Proof: <a className="break-all text-cherry-700 underline dark:text-cherry-400" href={info.proofUrl} target="_blank" rel="noreferrer noopener">{info.proofUrl}</a>
+        Proof: <a className="break-all text-cherry-800 underline dark:text-cherry-400" href={info.proofUrl} target="_blank" rel="noreferrer noopener">{info.proofUrl}</a>
       </p>
 
       {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-300">{error}</p>}

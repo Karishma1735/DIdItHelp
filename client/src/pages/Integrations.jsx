@@ -84,7 +84,7 @@ export default function Integrations() {
               {d.routines.items.map((r) => (
                 <article key={r.id} className="card space-y-2">
                   <h3 className="text-lg font-semibold">{r.name}</h3>
-                  <p className="font-mono text-xs uppercase tracking-wider text-cherry-700 dark:text-cherry-300">{r.when}</p>
+                  <p className="font-mono text-xs uppercase tracking-wider text-cherry-800 dark:text-cherry-300">{r.when}</p>
                   <p className="text-sm">Sends <code className="font-mono text-xs">{r.send}</code> to {r.to}.</p>
                   <div className="flex items-center gap-2">
                     <code className="min-w-0 flex-1 truncate rounded bg-cream-200 px-2 py-1 font-mono text-[11px] dark:bg-wine-800" title={r.url}>{r.url}</code>

@@ -11,9 +11,9 @@ export default {
       },
       colors: {
         // Cherry red
-        cherry: {
-          50: '#FDEEF0', 100: '#FADCE0', 200: '#F4B6BE', 300: '#EA8795', 400: '#DC566B',
-          500: '#CB2D47', 600: '#B3122D', 700: '#960F26', 800: '#7A0D20', 900: '#5F0A19', 950: '#3E0610',
+          cherry: {
+          50: '#FEF4F4', 100: '#FCE6E7', 200: '#F8C9CD', 300: '#F2A5AD', 400: '#E97E8C',
+          500: '#DE6074', 600: '#D0526A', 700: '#BE4358', 800: '#A33648', 900: '#852B3B', 950: '#5C1D29',
         },
         // Forest green, used only for "it helped" and success states
         leaf: { 50: '#EAF5EE', 100: '#D3EBDC', 300: '#86C9A3', 600: '#2E7D55', 700: '#1F6B4A', 800: '#17563B' },

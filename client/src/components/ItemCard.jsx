@@ -64,7 +64,7 @@ export default function ItemCard({ item, readOnly, onChange }) {
 
       {item.proofUrl && (
         <p className="text-sm">
-          Proof: <a className="break-all text-cherry-700 underline dark:text-cherry-400" href={item.proofUrl} target="_blank" rel="noreferrer noopener">{item.proofUrl}</a>
+          Proof: <a className="break-all text-cherry-800 underline dark:text-cherry-400" href={item.proofUrl} target="_blank" rel="noreferrer noopener">{item.proofUrl}</a>
         </p>
       )}
       {item.askedAt && (

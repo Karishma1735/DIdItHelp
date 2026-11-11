@@ -1,6 +1,6 @@
 export const STATES = {
   due: { label: 'Due', cls: 'bg-cream-200 text-wine-700 ring-1 ring-inset ring-cream-400 dark:bg-wine-800 dark:text-cream-200 dark:ring-wine-700' },
-  late: { label: 'Late', cls: 'bg-cherry-600 text-cream-50 dark:bg-cherry-500' },
+  late: { label: 'Late', cls: 'bg-cherry-700 text-cream-50 dark:bg-cherry-600' },
   unasked: { label: 'Delivered, not asked yet', cls: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200' },
   waiting: { label: 'Waiting for an answer', cls: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200' },
   lot: { label: 'Helped a lot', cls: 'bg-leaf-700 text-white dark:bg-leaf-600' },

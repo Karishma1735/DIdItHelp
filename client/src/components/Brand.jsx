@@ -13,7 +13,7 @@ export function CherryMark({ className = 'h-8 w-8', leaf = '#9DBB5A' }) {
 
 export default function Brand({ light = false, size = 'text-xl' }) {
   return (
-    <span className={`inline-flex items-center gap-2 ${light ? 'text-cream-50' : 'text-cherry-700 dark:text-cream-50'}`}>
+    <span className={`inline-flex items-center gap-2 ${light ? 'text-cream-50' : 'text-cherry-800 dark:text-cream-50'}`}>
       <CherryMark className="h-8 w-8" leaf={light ? '#C9E08A' : '#6B8A33'} />
       <span className={`font-display font-semibold italic tracking-tight ${size}`}>Did it help?</span>
     </span>

@@ -18,10 +18,10 @@
   .card { @apply rounded-2xl border border-cream-300 bg-cream-50 p-4 shadow-soft dark:border-wine-800 dark:bg-wine-900 sm:p-5; }
   .input { @apply w-full rounded-lg border border-cream-400 bg-white/70 px-3 py-2 text-sm outline-none transition focus:border-cherry-600 focus:ring-2 focus:ring-cherry-600/20 dark:border-wine-700 dark:bg-wine-950; }
   .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50; }
-  .btn-primary { @apply btn bg-cherry-600 text-cream-50 shadow-sm hover:bg-cherry-700 dark:bg-cherry-500 dark:hover:bg-cherry-400; }
+  .btn-primary { @apply btn bg-cherry-700 text-cream-50 shadow-sm hover:bg-cherry-800 dark:bg-cherry-600 dark:hover:bg-cherry-500; }
   .btn-ghost { @apply btn border border-cream-400 text-wine-800 hover:bg-cream-200 dark:border-wine-700 dark:text-cream-100 dark:hover:bg-wine-800; }
   .label { @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-wine-600 dark:text-wine-400; }
   .muted { @apply text-wine-600 dark:text-wine-400; }
-  .eyebrow { @apply font-mono text-[11px] uppercase tracking-[0.14em] text-cherry-700 dark:text-cherry-300; }
-  .link { @apply font-medium text-cherry-700 underline decoration-cherry-300 underline-offset-2 hover:decoration-cherry-600 dark:text-cherry-300; }
+  .eyebrow { @apply font-mono text-[11px] uppercase tracking-[0.14em] text-cherry-800 dark:text-cherry-300; }
+  .link { @apply font-medium text-cherry-800 underline decoration-cherry-300 underline-offset-2 hover:decoration-cherry-600 dark:text-cherry-300; }
 }
