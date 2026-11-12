@@ -27,6 +27,14 @@ router.get('/', (req, res) => {
         fields: ['channel', 'to', 'receiverName', 'ownerName', 'what', 'proofUrl', 'answerUrl', 'lotUrl', 'littleUrl', 'noneUrl', 'isReminder'],
       },
       {
+        id: 'reminder',
+        name: 'Morning prompt and deadline reminder',
+        env: 'VIASOCKET_REMINDER_WEBHOOK_URL',
+        configured: set('VIASOCKET_REMINDER_WEBHOOK_URL'),
+        purpose: 'Every weekday at 10:00 asks each person who has not planned yet “What will you deliver today?”, and reminds a person once when an item’s deadline passes without delivery. Goes to their Slack @name or email.',
+        fields: ['kind', 'channel', 'to', 'receiverName', 'dashboardUrl', 'what', 'forWhom', 'deadline', 'plannedDay'],
+      },
+      {
         id: 'invite',
         name: 'Team invite',
         env: 'VIASOCKET_INVITE_WEBHOOK_URL',

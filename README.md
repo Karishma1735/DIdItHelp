@@ -12,6 +12,14 @@ A mentor or manager opens a read-only link and sees what you are doing today and
 2. **Deliver**: mark it delivered with a proof link (PR, live flow, doc). No proof, no delivery.
 3. **Confirm**: the server posts to your viaSocket flow, which messages the receiver: "Hi Rahul, I delivered “Zoho plug”. Did it help you?" with three one-tap links. The receiver taps one.
 
+### The daily rhythm: plan, deadline, report
+
+1. **Morning (10:00 on weekdays):** everyone who hasn't planned yet today gets "What will you deliver today?" on their Slack or email (set in Settings, default their account email). Each item is planned with a **deadline time** (default 17:00). The day and the deadline can't be changed afterwards. Managers see "Hasn't planned today yet" on a person's card.
+2. **Deadline:** when an item's deadline passes without delivery, the person gets **one** reminder (checked every 5 minutes, so within about 5 minutes). It is claimed in the database before it is sent, so it can never go twice; if viaSocket fails it is retried on the next check.
+3. **Submit:** when someone marks an item delivered in the evening (from `REPORT_FROM_HOUR`, default 16:00), their manager is emailed from **that person's own Gmail**: the item, its proof link and the day so far (delivered, still open, late). It never includes receivers' contact details. If the person hasn't connected Gmail (or it expired), nothing is sent, the item says "Report not emailed: connect your Gmail", and their desk shows a banner.
+
+The morning prompt and deadline reminder use the viaSocket flow at `VIASOCKET_REMINDER_WEBHOOK_URL`. Create it like the other flows: a **Webhook** trigger, a Condition on `channel`, then Slack **Send message** or Gmail **Send email**, using `kind` to choose the wording (`morning_plan`: "What will you deliver today? {dashboardUrl}"; `deadline`: "Your deadline for {what} ({deadline}) has passed. {dashboardUrl}"). Payload: `{ kind, channel, to, receiverName, dashboardUrl, day?, what?, forWhom?, deadline?, plannedDay? }`. On Embarko, `embarko.json` runs `/tasks/tick` every 5 minutes; elsewhere call `GET /api/jobs/tick?key=<DIGEST_KEY>` on a 5-minute schedule.
+
 ### Teams: My desk and Team
 
 - Every user has a **My desk** tab (planning, delivering, settings). Managers also get a **Team** tab.
@@ -35,6 +43,7 @@ The **Integrations** page lets each person connect their own apps through viaSoc
 - **Every other app**: viaSocket's own screens inside the page (catalog of 2,300+ apps, Connect, action forms, the person's own automations).
 - Managers also see the shared message setup (ask and invite webhooks, routine URLs).
 - Each person connects only their own accounts. Their connection ids stay on the server and are never sent to a browser. The browser gets only a short-lived per-person token from `GET /api/viasocket/token`, signed with `VIASOCKET_EMBED_SECRET` (server only).
+- viaSocket identifies each person by a random id stored with them (people who existed earlier keep their old one), so a rebuilt database can never give a new person someone else's connections.
 - Needs `VIASOCKET_ORG_ID`, `VIASOCKET_PROJECT_ID` and `VIASOCKET_EMBED_SECRET` as server settings. The app's security rules allow `*.viasocket.com` for the embedded screens and the connect script.
 
 ### AI assistant for managers
@@ -215,6 +224,7 @@ If your host sleeps, add a flow on a daily schedule that calls `GET https://<APP
 | `GET /api/viasocket/token`, `/status`, `/slack/people`; `POST /api/viasocket/connected`, `/slack/me`, `/test/:app` | signed in | The person's own viaSocket connections (Slack and Gmail) |
 | `POST /api/ai/ask`, `GET /api/ai/history` | manager | The manager's AI assistant |
 | `GET /api/ai-tools/list_team`, `/team_summary`, `/employee_report` | per-manager pass | Read-only tools the AI calls |
+| `GET /tasks/tick`, `/api/jobs/tick` | scheduler secret / `?key=` | Morning prompt and deadline reminders |
 | `GET /api/integrations` | manager | Read-only viaSocket wiring status (no secrets) |
 | `GET /api/auth/invite/:token` | rate-limited | Who invited you (join page) |
 | `GET /api/today`, `/api/digest`, `/api/jobs/reminders` | `?key=DIGEST_KEY` | For viaSocket schedules |

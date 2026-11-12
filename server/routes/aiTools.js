@@ -29,7 +29,7 @@ function weekParam(raw) {
   return dates.isDay(w) ? w : thisWeek;
 }
 
-const brief = (i) => ({ what: i.what, state: i.state, plannedDay: i.plannedDay });
+const brief = (i) => ({ what: i.what, state: i.state, plannedDay: i.plannedDay, deadline: i.deadlineTime, pastDeadline: !!i.pastDeadline });
 
 router.get('/list_team', (req, res) => {
   res.json({
@@ -85,6 +85,9 @@ router.get('/employee_report', async (req, res) => {
       forWhom: i.forWhom,
       state: i.state,
       plannedDay: i.plannedDay,
+      deadline: i.deadlineTime,
+      pastDeadline: i.pastDeadline,
+      reportEmailedToManagerAt: i.reportSentAt,
       deliveredAt: i.deliveredAt,
       deliveredLate: i.deliveredLate,
       proofUrl: i.proofUrl || null,

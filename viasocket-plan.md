@@ -98,7 +98,7 @@ The manager's identity is never supplied by the AI. Each question carries a shor
 
 # Plan: daily plan, deadline reminders and the manager's report (features `app-integrations` + app code)
 
-Status: proposed, waiting for a yes. Owner's choices (asked): reminders through a viaSocket flow (Slack or email); the report is emailed when the employee submits; the email is sent from the employee's own Gmail; the deadline is a time on the planned day, per item.
+Status: confirmed and built. Owner's choices (asked): reminders through a viaSocket flow (Slack or email); the report is emailed when the employee submits; the email is sent from the employee's own Gmail; the deadline is a time on the planned day, per item.
 
 ## The day, step by step
 

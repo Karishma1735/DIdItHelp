@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS users (
   reports_to INTEGER REFERENCES users(id),
   is_manager INTEGER NOT NULL DEFAULT 0,
   is_demo INTEGER NOT NULL DEFAULT 0,
+  alert_contact TEXT NOT NULL DEFAULT '',
+  vs_id TEXT,
   created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS items (
@@ -34,6 +36,9 @@ CREATE TABLE IF NOT EXISTS items (
   asked_via TEXT CHECK (asked_via IN ('slack','email')),
   ask_error TEXT NOT NULL DEFAULT '',
   reminder_sent_at TEXT, answered_at TEXT,
+  deadline_time TEXT NOT NULL DEFAULT '17:00',
+  deadline_reminder_sent_at TEXT,
+  report_sent_at TEXT, report_error TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS items_owner ON items(owner_id);
@@ -60,6 +65,12 @@ CREATE TABLE IF NOT EXISTS invites (
   contact TEXT NOT NULL DEFAULT '', sent_at TEXT, sent_via TEXT, send_error TEXT NOT NULL DEFAULT '',
   used_by INTEGER REFERENCES users(id), used_at TEXT, revoked_at TEXT,
   expires_at TEXT NOT NULL, created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS notices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  kind TEXT NOT NULL, day TEXT NOT NULL, sent_at TEXT NOT NULL,
+  UNIQUE (user_id, kind, day)
 );
 CREATE TABLE IF NOT EXISTS viasocket_connections (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,6 +104,25 @@ if (!inviteCols.includes('contact')) {
   db.exec('ALTER TABLE invites ADD COLUMN sent_via TEXT');
   db.exec("ALTER TABLE invites ADD COLUMN send_error TEXT NOT NULL DEFAULT ''");
 }
+// viaSocket's id for a person: random for everyone new, so a rebuilt database can never hand a new person someone
+// else's connections. People who already existed keep their old id (their database number) so nothing disconnects.
+if (!userCols.includes('vs_id')) db.exec('ALTER TABLE users ADD COLUMN vs_id TEXT');
+db.exec('UPDATE users SET vs_id = CAST(id AS TEXT) WHERE vs_id IS NULL');
+if (!userCols.includes('alert_contact')) db.exec("ALTER TABLE users ADD COLUMN alert_contact TEXT NOT NULL DEFAULT ''");
+const itemCols = db.prepare('PRAGMA table_info(items)').all().map((c) => c.name);
+if (!itemCols.includes('deadline_time')) {
+  db.exec("ALTER TABLE items ADD COLUMN deadline_time TEXT NOT NULL DEFAULT '17:00'");
+  db.exec('ALTER TABLE items ADD COLUMN deadline_reminder_sent_at TEXT');
+  db.exec('ALTER TABLE items ADD COLUMN report_sent_at TEXT');
+  db.exec("ALTER TABLE items ADD COLUMN report_error TEXT NOT NULL DEFAULT ''");
+}
+// The deadline time, like the planned day, can never be edited.
+db.exec(`
+DROP TRIGGER IF EXISTS items_deadline_immutable;
+CREATE TRIGGER items_deadline_immutable
+BEFORE UPDATE OF deadline_time ON items
+BEGIN SELECT RAISE(ABORT, 'deadline_time is immutable'); END;
+`);
 // Items are never deleted, except the removable sample employee's items (users.is_demo = 1).
 db.exec(`
 DROP TRIGGER IF EXISTS items_no_delete;
@@ -108,7 +138,7 @@ const userOut = (r) =>
   r && {
     id: sid(r.id), name: r.name, role: r.role, email: r.email, passwordHash: r.password_hash,
     mentorName: r.mentor_name, mentorContact: r.mentor_contact, createdAt: r.created_at,
-    isManager: !!r.is_manager, isDemo: !!r.is_demo, reportsTo: r.reports_to == null ? null : sid(r.reports_to),
+    vsId: r.vs_id, alertContact: r.alert_contact, isManager: !!r.is_manager, isDemo: !!r.is_demo, reportsTo: r.reports_to == null ? null : sid(r.reports_to),
   };
 
 const itemOut = (r) =>
@@ -117,14 +147,17 @@ const itemOut = (r) =>
     isForMentor: !!r.is_for_mentor, plannedDay: r.planned_day, status: r.status, proofUrl: r.proof_url,
     deliveredAt: r.delivered_at, droppedAt: r.dropped_at, askedAt: r.asked_at, askedVia: r.asked_via,
     askError: r.ask_error, reminderSentAt: r.reminder_sent_at, answeredAt: r.answered_at,
+    deadlineTime: r.deadline_time, deadlineReminderSentAt: r.deadline_reminder_sent_at,
+    reportSentAt: r.report_sent_at, reportError: r.report_error,
     createdAt: r.created_at, updatedAt: r.updated_at,
   };
 
-const USER_COLS = { name: 'name', role: 'role', mentorName: 'mentor_name', mentorContact: 'mentor_contact' };
+const USER_COLS = { name: 'name', role: 'role', mentorName: 'mentor_name', mentorContact: 'mentor_contact', alertContact: 'alert_contact' };
 const ITEM_COLS = {
   status: 'status', proofUrl: 'proof_url', deliveredAt: 'delivered_at', droppedAt: 'dropped_at',
   askedAt: 'asked_at', askedVia: 'asked_via', askError: 'ask_error',
   reminderSentAt: 'reminder_sent_at', answeredAt: 'answered_at',
+  deadlineReminderSentAt: 'deadline_reminder_sent_at', reportSentAt: 'report_sent_at', reportError: 'report_error',
 };
 
 function update(table, cols, id, fields, touch) {
@@ -141,8 +174,8 @@ const users = {
   byId: (id) => userOut(db.prepare('SELECT * FROM users WHERE id = ?').get(Number(id))),
   byEmail: (email) => userOut(db.prepare('SELECT * FROM users WHERE email = ?').get(email)),
   create: ({ name, role, email, passwordHash, isManager = false, reportsTo = null, isDemo = false }) => {
-    const r = db.prepare('INSERT INTO users (name, role, email, password_hash, is_manager, is_demo, reports_to, created_at) VALUES (?,?,?,?,?,?,?,?)')
-      .run(name, role || '', email, passwordHash, isManager ? 1 : 0, isDemo ? 1 : 0, reportsTo == null ? null : Number(reportsTo), now());
+    const r = db.prepare('INSERT INTO users (name, role, email, password_hash, is_manager, is_demo, reports_to, vs_id, created_at) VALUES (?,?,?,?,?,?,?,?,?)')
+      .run(name, role || '', email, passwordHash, isManager ? 1 : 0, isDemo ? 1 : 0, reportsTo == null ? null : Number(reportsTo), require('crypto').randomBytes(10).toString('hex'), now());
     return users.byId(r.lastInsertRowid);
   },
   update: (id, fields) => { update('users', USER_COLS, id, fields, false); return users.byId(id); },
@@ -156,11 +189,11 @@ const items = {
     itemOut(db.prepare('SELECT * FROM items WHERE id = ? AND owner_id = ?').get(Number(id), Number(ownerId))),
   listByOwner: (ownerId) =>
     db.prepare('SELECT * FROM items WHERE owner_id = ? ORDER BY planned_day, created_at, id').all(Number(ownerId)).map(itemOut),
-  create: ({ owner, what, forWhom, contact, isForMentor, plannedDay }) => {
+  create: ({ owner, what, forWhom, contact, isForMentor, plannedDay, deadlineTime = '17:00' }) => {
     const t = now();
     const r = db.prepare(
-      'INSERT INTO items (owner_id, what, for_whom, contact, is_for_mentor, planned_day, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)'
-    ).run(Number(owner), what, forWhom, contact, isForMentor ? 1 : 0, plannedDay, t, t);
+      'INSERT INTO items (owner_id, what, for_whom, contact, is_for_mentor, planned_day, deadline_time, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)'
+    ).run(Number(owner), what, forWhom, contact, isForMentor ? 1 : 0, plannedDay, deadlineTime, t, t);
     return items.get(r.lastInsertRowid);
   },
   update: (id, fields) => { update('items', ITEM_COLS, id, fields, true); return items.get(id); },
@@ -174,6 +207,18 @@ const items = {
   claimReminder: (id) =>
     db.prepare('UPDATE items SET reminder_sent_at = ? WHERE id = ? AND reminder_sent_at IS NULL AND answered_at IS NULL')
       .run(now(), Number(id)).changes === 1,
+  // Items planned for `day` whose deadline time has passed, not delivered, and never reminded. Sample data is skipped.
+  dueForDeadline: (day, hm) =>
+    db.prepare(
+      `SELECT i.* FROM items i JOIN users u ON u.id = i.owner_id
+       WHERE i.status = 'planned' AND i.planned_day = ? AND i.deadline_time <= ?
+       AND i.deadline_reminder_sent_at IS NULL AND u.is_demo = 0`
+    ).all(day, hm).map(itemOut),
+  // Atomic claim: only one caller can ever win, so a deadline reminder is sent at most once per item.
+  claimDeadlineReminder: (id) =>
+    db.prepare("UPDATE items SET deadline_reminder_sent_at = ? WHERE id = ? AND deadline_reminder_sent_at IS NULL AND status = 'planned'")
+      .run(now(), Number(id)).changes === 1,
+  releaseDeadlineReminder: (id) => db.prepare('UPDATE items SET deadline_reminder_sent_at = NULL WHERE id = ?').run(Number(id)),
   releaseReminder: (id) => db.prepare('UPDATE items SET reminder_sent_at = NULL WHERE id = ?').run(Number(id)),
 };
 
@@ -306,4 +351,19 @@ const vsConn = {
       .run(value, label, now(), Number(userId), 'slack'),
 };
 
-module.exports = { db, users, items, answers, tokens, share, invites, tx, removeDemoUser, vsConn };
+// "Already sent today" records, so a message is never sent twice for the same person, kind and day.
+const notices = {
+  claim: (userId, kind, day) =>
+    db.prepare('INSERT OR IGNORE INTO notices (user_id, kind, day, sent_at) VALUES (?,?,?,?)').run(Number(userId), kind, day, now()).changes === 1,
+  release: (userId, kind, day) => db.prepare('DELETE FROM notices WHERE user_id = ? AND kind = ? AND day = ?').run(Number(userId), kind, day),
+};
+
+// People (not sample data) with nothing planned for `day`, for the morning prompt.
+users.withoutPlanFor = (day) =>
+  db.prepare(
+    `SELECT * FROM users u WHERE u.is_demo = 0
+     AND NOT EXISTS (SELECT 1 FROM items i WHERE i.owner_id = u.id AND i.planned_day = ?)
+     ORDER BY u.id`
+  ).all(day).map(userOut);
+
+module.exports = { db, users, items, answers, tokens, share, invites, tx, removeDemoUser, vsConn, notices };

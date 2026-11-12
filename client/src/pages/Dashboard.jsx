@@ -4,6 +4,7 @@ import api, { errorMessage } from '../api';
 import { useAuth } from '../auth.jsx';
 import AppShell from '../components/AppShell.jsx';
 import ManagerNote from '../components/ManagerNote.jsx';
+import GmailBanner from '../components/GmailBanner.jsx';
 import WeekView from '../components/WeekView.jsx';
 import WeekNav from '../components/WeekNav.jsx';
 import PlanForm from '../components/PlanForm.jsx';
@@ -42,6 +43,7 @@ export default function Dashboard() {
       actions={data && <WeekNav week={data.week} today={data.today} onChange={goTo} />}
     >
       <ManagerNote />
+      <GmailBanner />
       {error && <p role="alert" className="text-red-700 dark:text-red-400">{error}</p>}
       {!data && !error && <p className="muted">Loading…</p>}
       {data && (

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import api, { errorMessage } from '../api';
 
 export default function PlanForm({ today, mentorName, onCreated }) {
-  const empty = { what: '', forWhom: '', contact: '', plannedDay: today, isForMentor: false };
+  const empty = { what: '', forWhom: '', contact: '', plannedDay: today, deadlineTime: '17:00', isForMentor: false };
   const [form, setForm] = useState(empty);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -14,7 +14,7 @@ export default function PlanForm({ today, mentorName, onCreated }) {
     setError('');
     try {
       await api.post('/items', form);
-      setForm({ ...empty, plannedDay: form.plannedDay });
+      setForm({ ...empty, plannedDay: form.plannedDay, deadlineTime: form.deadlineTime });
       onCreated();
     } catch (err) {
       setError(errorMessage(err));
@@ -46,10 +46,17 @@ export default function PlanForm({ today, mentorName, onCreated }) {
           </div>
         </div>
       )}
-      <div className="max-w-xs">
-        <label className="label" htmlFor="day">Planned day (can’t be changed later)</label>
-        <input id="day" className="input" type="date" required min={today} value={form.plannedDay} onChange={set('plannedDay')} />
+      <div className="grid max-w-md gap-3 sm:grid-cols-2">
+        <div>
+          <label className="label" htmlFor="day">Planned day</label>
+          <input id="day" className="input" type="date" required min={today} value={form.plannedDay} onChange={set('plannedDay')} />
+        </div>
+        <div>
+          <label className="label" htmlFor="deadline">Deadline time</label>
+          <input id="deadline" className="input" type="time" required value={form.deadlineTime} onChange={set('deadlineTime')} />
+        </div>
       </div>
+      <p className="-mt-1 text-xs muted">The day and the deadline can’t be changed later. You get one reminder when the deadline passes.</p>
       {error && <p role="alert" className="text-sm text-red-700 dark:text-red-400">{error}</p>}
       <button className="btn-primary" disabled={busy}>{busy ? 'Saving…' : 'Add to my plan'}</button>
     </form>

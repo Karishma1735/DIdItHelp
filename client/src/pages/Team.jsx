@@ -20,8 +20,11 @@ function Line({ title, items }) {
       <ul className="mt-1 space-y-1">
         {items.map((i) => (
           <li key={i.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-            <span className="font-medium">{i.what}</span>
-            <StatusBadge state={i.state} />
+            <span className="font-medium">{i.what}{i.deadlineTime && i.state === 'due' ? <span className="muted font-normal"> · by {i.deadlineTime}</span> : ''}</span>
+            <span className="flex items-center gap-1.5">
+              {i.pastDeadline && i.state === 'due' && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-950 dark:text-red-200">Past deadline</span>}
+              <StatusBadge state={i.state} />
+            </span>
           </li>
         ))}
       </ul>
@@ -65,7 +68,7 @@ function MemberCard({ m, week }) {
         </div>
         <div className="space-y-2 border-t border-mist-300 pt-3 dark:border-ink-800">
           <p className="text-sm font-semibold">Today</p>
-          {quiet && <p className="text-sm muted">Nothing planned or delivered today.</p>}
+          {quiet && <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Hasn’t planned today yet.</p>}
           <Line title="Late" items={m.today.late} />
           <Line title="Planned" items={m.today.planned} />
           <Line title="Delivered" items={m.today.deliveredToday} />

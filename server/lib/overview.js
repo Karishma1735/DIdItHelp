@@ -17,6 +17,10 @@ function serializeItem(item, today, { forManager = false } = {}) {
     contact: forManager ? undefined : item.contact,
     isForMentor: item.isForMentor,
     plannedDay: item.plannedDay,
+    deadlineTime: item.deadlineTime,
+    pastDeadline: item.status === 'planned' && (item.plannedDay < today || (item.plannedDay === today && dates.localParts().hm >= item.deadlineTime)),
+    reportSentAt: item.reportSentAt,
+    reportError: forManager ? undefined : item.reportError || undefined,
     status: item.status,
     state: scoring.itemState(item, today),
     proofUrl: item.proofUrl,
@@ -71,7 +75,7 @@ async function buildOverview(user, weekParam, opts = {}) {
 function buildTeamSummary(manager, weekParam) {
   const today = dates.today();
   const weekStart = dates.isDay(weekParam) ? dates.weekStartOf(weekParam) : dates.weekStartOf(today);
-  const lite = (i) => ({ id: i.id, what: i.what, forWhom: i.forWhom, state: i.state });
+  const lite = (i) => ({ id: i.id, what: i.what, forWhom: i.forWhom, state: i.state, deadlineTime: i.deadlineTime, pastDeadline: i.pastDeadline });
 
   const rows = store.users.reportsOf(manager.id).map((member) => {
     const all = loadItems(member.id);

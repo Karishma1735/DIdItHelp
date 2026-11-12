@@ -93,4 +93,14 @@ async function sendInvite({ contact, name, managerName, joinUrl, expiresAt, make
   );
 }
 
-module.exports = { appUrl, channelFor, createAnswerLinks, messageText, sendAsk, sendInvite };
+// Reminders to a person about their OWN day: the morning prompt and the deadline reminder.
+// Goes to the person's reminder contact (Slack @name or email), by default their account email.
+async function sendReminder(user, extra) {
+  const contact = (user.alertContact || user.email).trim();
+  return postToViaSocket(
+    { channel: channelFor(contact), to: contact, receiverName: user.name, dashboardUrl: appUrl(), ...extra },
+    'VIASOCKET_REMINDER_WEBHOOK_URL'
+  );
+}
+
+module.exports = { appUrl, channelFor, createAnswerLinks, messageText, sendAsk, sendInvite, sendReminder };

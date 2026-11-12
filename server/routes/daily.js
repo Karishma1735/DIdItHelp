@@ -7,6 +7,7 @@ const { loadItems, serializeItem } = require('../lib/overview');
 const { appUrl } = require('../lib/viasocket');
 const { safeEqual } = require('../lib/tokens');
 const { runReminders } = require('../jobs/reminders');
+const { runTick } = require('../jobs/tick');
 
 const router = express.Router();
 
@@ -93,6 +94,11 @@ router.get('/digest', keyCheck, async (req, res) => {
 // Backup trigger for the reminder job, for hosts that sleep and miss the daily cron.
 router.get('/jobs/reminders', keyCheck, async (req, res) => {
   res.json(await runReminders());
+});
+
+// Backup trigger for the 5-minute job, for a flow or host that cannot use the scheduler.
+router.get('/jobs/tick', keyCheck, async (req, res) => {
+  res.json(await runTick());
 });
 
 module.exports = router;

@@ -13,7 +13,7 @@ const { hashToken } = require('../lib/tokens');
 const publicUser = (u) => {
   const manager = u.reportsTo ? store.users.byId(u.reportsTo) : null;
   return {
-    id: u.id, name: u.name, role: u.role, email: u.email, mentorName: u.mentorName, mentorContact: u.mentorContact,
+    id: u.id, name: u.name, role: u.role, email: u.email, mentorName: u.mentorName, mentorContact: u.mentorContact, alertContact: u.alertContact,
     isManager: u.isManager, managerName: manager ? manager.name : null,
   };
 };
@@ -90,6 +90,7 @@ router.patch('/me', requireAuth, (req, res) => {
   if (req.body.role !== undefined) fields.role = str(req.body.role, 100);
   if (req.body.mentorName !== undefined) fields.mentorName = str(req.body.mentorName, 100);
   if (req.body.mentorContact !== undefined) fields.mentorContact = str(req.body.mentorContact);
+  if (req.body.alertContact !== undefined) fields.alertContact = str(req.body.alertContact);
   res.json({ user: publicUser(store.users.update(req.userId, fields)) });
 });
 

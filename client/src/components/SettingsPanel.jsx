@@ -4,7 +4,7 @@ import { useAuth } from '../auth.jsx';
 
 export default function SettingsPanel() {
   const { user, setUser } = useAuth();
-  const [form, setForm] = useState({ name: user.name, role: user.role, mentorName: user.mentorName, mentorContact: user.mentorContact });
+  const [form, setForm] = useState({ name: user.name, role: user.role, mentorName: user.mentorName, mentorContact: user.mentorContact, alertContact: user.alertContact || '' });
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
   const [share, setShare] = useState({ active: false, url: '' });
@@ -45,6 +45,7 @@ export default function SettingsPanel() {
         <div><label className="label" htmlFor="s-role">Your role</label><input id="s-role" className="input" value={form.role} onChange={set('role')} /></div>
         <div><label className="label" htmlFor="s-mn">Mentor’s name</label><input id="s-mn" className="input" value={form.mentorName} onChange={set('mentorName')} /></div>
         <div><label className="label" htmlFor="s-mc">Mentor’s contact (Slack @name or email)</label><input id="s-mc" className="input" value={form.mentorContact} onChange={set('mentorContact')} /></div>
+        <div className="sm:col-span-2"><label className="label" htmlFor="s-ac">Where should your reminders go? (Slack @name or email)</label><input id="s-ac" className="input" value={form.alertContact} onChange={set('alertContact')} placeholder={user.email} /><p className="mt-1 text-xs muted">The 10:00 “what will you deliver today?” prompt and deadline reminders go here. Leave it empty to use {user.email}.</p></div>
         <div className="sm:col-span-2 flex items-center gap-3">
           <button className="btn-primary">Save settings</button>
           {msg && <span className="text-sm text-leaf-700 dark:text-leaf-300">{msg}</span>}

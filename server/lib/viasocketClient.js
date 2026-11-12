@@ -19,7 +19,11 @@ function getClient() {
   return client;
 }
 
-// The product's own id for the person, as a string (never the email). One per person, forever.
-const scopeFor = (userId) => getClient().user(String(userId));
+// viaSocket's id for the person: a random id stored with them (never the email, never a reusable number).
+// 'catalog' is the fixed id used only for public catalog reads.
+function scopeFor(userId) {
+  const person = userId === 'catalog' ? null : require('./store').users.byId(userId);
+  return getClient().user(person && person.vsId ? person.vsId : String(userId));
+}
 
 module.exports = { configured, getClient, scopeFor };

@@ -7,6 +7,12 @@
       "path": "/tasks/reminders",
       "timezone": "Asia/Kolkata",
       "name": "daily reminders"
+    },
+    {
+      "cron": "*/5 * * * *",
+      "path": "/tasks/tick",
+      "timezone": "Asia/Kolkata",
+      "name": "morning prompt and deadline reminders"
     }
   ]
 }

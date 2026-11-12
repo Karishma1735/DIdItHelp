@@ -13,7 +13,7 @@ function Group({ title, items, empty, showDay, tone }) {
             <li key={i.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span>
                 <span className="font-medium">{i.what}</span>
-                <span className="muted"> · for {i.forWhom}{showDay ? ` · planned ${formatDay(i.plannedDay)}` : ''}</span>
+                <span className="muted"> · for {i.forWhom}{showDay ? ` · planned ${formatDay(i.plannedDay)}` : ''}{i.deadlineTime && i.status === 'planned' ? ` · by ${i.deadlineTime}` : ''}</span>
               </span>
               <StatusBadge state={i.state} />
             </li>

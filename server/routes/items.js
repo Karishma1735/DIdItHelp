@@ -4,6 +4,7 @@ const dates = require('../lib/dates');
 const { requireAuth } = require('../middleware/auth');
 const { sendAsk, createAnswerLinks, messageText } = require('../lib/viasocket');
 const { buildOverview, loadItems, serializeItem } = require('../lib/overview');
+const { emailManagerReport } = require('../lib/report');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -47,6 +48,7 @@ router.post('/items', async (req, res) => {
   const user = store.users.byId(req.userId);
   const what = str(req.body.what, 300);
   const plannedDay = req.body.plannedDay;
+  const deadlineTime = req.body.deadlineTime === undefined ? '17:00' : req.body.deadlineTime;
   const isForMentor = req.body.isForMentor === true;
   let forWhom = str(req.body.forWhom, 120);
   let contact = str(req.body.contact, 200);
@@ -66,7 +68,12 @@ router.post('/items', async (req, res) => {
     return res.status(400).json({ error: 'The planned day can’t be in the past.' });
   }
 
-  await reply(res, store.items.create({ owner: user.id, what, forWhom, contact, isForMentor, plannedDay }), 201);
+  if (!dates.isTime(deadlineTime)) return res.status(400).json({ error: 'Pick a deadline time, like 17:00.' });
+  if (plannedDay === dates.today() && deadlineTime <= dates.localParts().hm) {
+    return res.status(400).json({ error: 'That deadline time has already passed today. Pick a later time, or plan it for another day.' });
+  }
+
+  await reply(res, store.items.create({ owner: user.id, what, forWhom, contact, isForMentor, plannedDay, deadlineTime }), 201);
 });
 
 // No PATCH route exists for items on purpose: the planned day can't be edited
@@ -82,6 +89,7 @@ router.post('/items/:id/deliver', async (req, res) => {
   }
   item = store.items.update(item.id, { status: 'delivered', proofUrl, deliveredAt: new Date().toISOString() });
   item = await askAndRecord(item, store.users.byId(req.userId));
+  await emailManagerReport(item); // evening submissions are emailed to the manager; never blocks the delivery
   await reply(res, item);
 });
 

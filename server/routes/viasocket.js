@@ -22,40 +22,9 @@ const sendLimiter = rateLimit({
   message: { error: 'Too many test messages. Please try again in a few minutes.' },
 });
 
-// The two apps featured at the top. Each person's test message goes only to themself.
-const FEATURED = {
-  slack: { name: 'Slack', send: 'Send_Message' },
-  gmail: { name: 'Gmail', send: 'Send_Email' },
-};
-
-const day = 24 * 60 * 60 * 1000;
-const cache = new Map();
-async function cached(key, fn) {
-  const hit = cache.get(key);
-  if (hit && Date.now() - hit.at < day) return hit.value;
-  const value = await fn();
-  cache.set(key, { at: Date.now(), value });
-  return value;
-}
-
-// The app's icon and name come from viaSocket's public catalog.
-const iconFor = (slug) =>
-  cached(`icon:${slug}`, async () => {
-    const v = await getClient().catalog.versions(await serviceIdFor(slug));
-    return (v && v.service && v.service.icon_url) || null;
-  });
-
-const serviceIdFor = (slug) => cached(`sid:${slug}`, () => scopeFor('catalog').serviceIdFor(slug));
-
-// key, published version and action_id come from viaSocket's own listing, never from memory.
-async function sendAction(slug) {
-  return cached(`act:${slug}`, async () => {
-    const list = await scopeFor('catalog').listActions(slug);
-    const a = list.actions.find((x) => x.key === FEATURED[slug].send);
-    if (!a) throw new Error(`The ${FEATURED[slug].name} send action was not found.`);
-    return { key: a.key, version: String(a.version).toLowerCase(), actionId: a.actionId };
-  });
-}
+const {
+  FEATURED, serviceIdFor, iconFor, sendAction, connectionFor, runFailed, friendly,
+} = require('../lib/viasocketApps');
 
 const featuredSlug = (req, res) => {
   const slug = String(req.params.app || '');
@@ -65,29 +34,6 @@ const featuredSlug = (req, res) => {
   }
   return slug;
 };
-
-const friendly = (err) => {
-  const m = String((err && err.message) || '').slice(0, 200);
-  return m || 'viaSocket did not answer. Please try again.';
-};
-
-// A run failed when the reply says so (the skill's own check).
-const runFailed = (out) =>
-  out && typeof out === 'object' && (typeof out.success === 'boolean' && 'data' in out ? !out.success : out.success === false);
-
-// The person's connection to one app: the one we saved if it still exists, else their newest.
-async function connectionFor(userId, slug) {
-  const user = scopeFor(userId);
-  const [sid, conns] = await Promise.all([serviceIdFor(slug), user.listConnections()]);
-  const mine = conns.filter((c) => c.service_id === sid);
-  if (!mine.length) return null;
-  const saved = store.vsConn.get(userId, slug);
-  const chosen =
-    (saved && mine.find((c) => c.id === saved.authId)) ||
-    mine.slice().sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)))[0];
-  store.vsConn.upsert(userId, slug, chosen.id); // also picks up a connection made in the embedded screens
-  return chosen;
-}
 
 // Per-person embed token for the Connect popup and the embedded screens. The only viaSocket value a browser holds.
 router.get('/token', async (req, res) => {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import api, { errorMessage } from '../api';
 import StatusBadge from './StatusBadge.jsx';
 import { formatDay, formatWhen } from '../dates.js';
@@ -56,10 +57,14 @@ export default function ItemCard({ item, readOnly, onChange }) {
           <p className="font-semibold">{item.what}</p>
           <p className="text-sm muted">
             For {item.forWhom}{item.isForMentor ? ' (my mentor)' : ''} · planned {formatDay(item.plannedDay)}
+            {item.deadlineTime && item.status === 'planned' && ` · by ${item.deadlineTime}`}
             {item.deliveredLate && ' · delivered late'}
           </p>
         </div>
-        <StatusBadge state={item.state} />
+        <div className="flex flex-wrap items-center gap-2">
+          {item.pastDeadline && item.state !== 'late' && <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-950 dark:text-red-200">Past deadline</span>}
+          <StatusBadge state={item.state} />
+        </div>
       </div>
 
       {item.proofUrl && (
@@ -76,6 +81,12 @@ export default function ItemCard({ item, readOnly, onChange }) {
       )}
       {item.answer?.comment && (
         <blockquote className="border-l-4 border-steel-600 pl-3 text-sm italic">“{item.answer.comment}”</blockquote>
+      )}
+      {item.reportSentAt && <p className="text-xs muted">Evening report emailed to your manager {formatWhen(item.reportSentAt)}.</p>}
+      {item.reportError && (
+        <p role="alert" className="rounded-lg bg-amber-100 p-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          {item.reportError} <Link className="link" to="/integrations">Go to Integrations</Link>
+        </p>
       )}
       {item.askError && (
         <p role="alert" className="rounded-lg bg-red-50 p-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-300">
