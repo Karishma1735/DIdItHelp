@@ -42,7 +42,7 @@ async function askAndRecord(item, owner) {
 }
 
 router.get('/overview', async (req, res) => {
-  res.json(await buildOverview(store.users.byId(req.userId), req.query.week));
+  res.json(await buildOverview(store.users.byId(req.userId), req.query));
 });
 
 router.post('/items', async (req, res) => {

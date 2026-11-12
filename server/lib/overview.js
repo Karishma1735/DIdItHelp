@@ -36,23 +36,35 @@ function serializeItem(item, today, { forManager = false } = {}) {
   };
 }
 
-async function buildOverview(user, weekParam, opts = {}) {
+// Which period is being looked at: ?view=day|week and ?date=YYYY-MM-DD (default: today, in the day view).
+// The old ?week=YYYY-MM-DD still works and means that week.
+function periodFor(params, today) {
+  const q = params && typeof params === 'object' ? params : { date: params };
+  const legacyWeek = q.week && dates.isDay(q.week) ? q.week : null;
+  const view = legacyWeek || q.view === 'week' ? 'week' : 'day';
+  const date = legacyWeek || (dates.isDay(q.date) ? q.date : today);
+  const start = view === 'week' ? dates.weekStartOf(date) : date;
+  const end = view === 'week' ? dates.weekEndOf(start) : date;
+  return { kind: view, start, end, isCurrent: today >= start && today <= end };
+}
+
+async function buildOverview(user, params, opts = {}) {
   const today = dates.today();
-  const weekStart = dates.isDay(weekParam) ? dates.weekStartOf(weekParam) : dates.weekStartOf(today);
+  const period = periodFor(params, today);
   const all = loadItems(user.id);
   const ser = (i) => serializeItem(i, today, opts);
 
-  const score = scoring.scoreWeek(all, weekStart);
-  const weekItems = all.filter(
+  const score = scoring.scorePeriod(all, period.start, period.end);
+  const inPeriod = all.filter(
     (i) =>
-      (i.plannedDay >= weekStart && i.plannedDay <= score.weekEnd) ||
-      (i.status === 'delivered' && scoring.deliveredDay(i) >= weekStart && scoring.deliveredDay(i) <= score.weekEnd)
+      (i.plannedDay >= period.start && i.plannedDay <= period.end) ||
+      (i.status === 'delivered' && scoring.deliveredDay(i) >= period.start && scoring.deliveredDay(i) <= period.end)
   );
 
   return {
     owner: { name: user.name, role: user.role },
     today,
-    week: { start: weekStart, end: score.weekEnd, isCurrent: weekStart === dates.weekStartOf(today) },
+    period,
     todaySection: {
       planned: all.filter((i) => i.plannedDay === today && i.status !== 'dropped').map(ser),
       deliveredToday: all.filter((i) => i.status === 'delivered' && scoring.deliveredDay(i) === today).map(ser),
@@ -63,23 +75,23 @@ async function buildOverview(user, weekParam, opts = {}) {
       impact: score.impact,
       reliability: score.reliability,
       answerRate: score.answerRate,
-      explanations: scoring.EXPLANATIONS,
+      explanations: scoring.explanations(period.kind),
     },
-    items: weekItems.map(ser),
-    weeks: scoring.weeklyTable(all, today, 8),
+    items: inPeriod.map(ser),
+    history: scoring.history(all, today, period.kind),
   };
 }
 
 // What a manager sees on the Team tab: one row per direct report plus a team roll-up.
 // Contacts are never included, and items are summarised by state, not counted as a score.
-function buildTeamSummary(manager, weekParam) {
+function buildTeamSummary(manager, params) {
   const today = dates.today();
-  const weekStart = dates.isDay(weekParam) ? dates.weekStartOf(weekParam) : dates.weekStartOf(today);
+  const period = periodFor(params, today);
   const lite = (i) => ({ id: i.id, what: i.what, forWhom: i.forWhom, state: i.state, deadlineTime: i.deadlineTime, pastDeadline: i.pastDeadline });
 
   const rows = store.users.reportsOf(manager.id).map((member) => {
     const all = loadItems(member.id);
-    const score = scoring.scoreWeek(all, weekStart);
+    const score = scoring.scorePeriod(all, period.start, period.end);
     const ser = (i) => serializeItem(i, today, { forManager: true });
     return {
       score,
@@ -101,22 +113,22 @@ function buildTeamSummary(manager, weekParam) {
     };
   });
 
-  const team = scoring.teamScore(rows.map((r) => r.score), weekStart);
+  const team = scoring.teamScore(rows.map((r) => r.score), period.start, period.end);
   return {
     manager: { name: manager.name, role: manager.role },
     today,
-    week: { start: weekStart, end: team.weekEnd, isCurrent: weekStart === dates.weekStartOf(today) },
+    period,
     team: {
       hero: scoring.heroSentence('', team, today, { team: true }),
       numbers: {
         impact: team.impact,
         reliability: team.reliability,
         answerRate: team.answerRate,
-        explanations: scoring.EXPLANATIONS,
+        explanations: scoring.explanations(period.kind),
       },
     },
     members: rows.map((r) => r.member),
   };
 }
 
-module.exports = { loadItems, serializeItem, buildOverview, buildTeamSummary };
+module.exports = { loadItems, serializeItem, buildOverview, buildTeamSummary, periodFor };

@@ -3,7 +3,7 @@ import api, { errorMessage } from '../api';
 import { useAuth } from '../auth.jsx';
 import Markdown from './Markdown.jsx';
 
-const generic = ['Who needs attention this week?', 'What is still waiting for an answer?', 'Which items are late?'];
+const generic = ['Who needs attention today?', 'What is still waiting for an answer?', 'Which items are late?'];
 
 // Manager-only assistant. It answers from the team's real reports and cannot change anything.
 export default function AskAI({ members }) {

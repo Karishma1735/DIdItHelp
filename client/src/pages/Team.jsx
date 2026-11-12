@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api, { errorMessage } from '../api';
 import AppShell from '../components/AppShell.jsx';
-import WeekNav from '../components/WeekNav.jsx';
+import PeriodNav from '../components/PeriodNav.jsx';
+import { periodLabel } from '../components/PeriodView.jsx';
+import usePeriod from '../usePeriod.js';
 import Hero from '../components/Hero.jsx';
 import Numbers from '../components/Numbers.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import InvitePanel from '../components/InvitePanel.jsx';
 import AskAI from '../components/AskAI.jsx';
-import { formatDay, formatRange } from '../dates.js';
+import { formatDay } from '../dates.js';
 
 const pct = (v) => (v === null || v === undefined ? '—' : `${v}%`);
 
@@ -41,11 +43,11 @@ function Mini({ label, value }) {
   );
 }
 
-function MemberCard({ m, week }) {
+function MemberCard({ m, query }) {
   const quiet = !m.today.planned.length && !m.today.deliveredToday.length && !m.today.late.length;
   return (
     <li>
-      <Link to={`/team/${m.id}?week=${week}`} className="card block space-y-4 transition hover:-translate-y-0.5 hover:border-steel-400">
+      <Link to={`/team/${m.id}?${query}`} className="card block space-y-4 transition hover:-translate-y-0.5 hover:border-steel-400">
         <div className="flex items-center gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-steel-600 font-display text-lg font-semibold text-mist-50">
             {m.name.trim()[0]?.toUpperCase()}
@@ -79,21 +81,19 @@ function MemberCard({ m, week }) {
 }
 
 export default function Team() {
-  const [params, setParams] = useSearchParams();
-  const week = params.get('week') || '';
+  const p = usePeriod();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     try {
-      const { data } = await api.get('/team', { params: week ? { week } : {} });
+      const { data } = await api.get('/team', { params: p.api });
       setData(data);
       setError('');
     } catch (err) { setError(errorMessage(err, 'Could not load your team.')); }
-  }, [week]);
+  }, [p.view, p.date]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [load]);
 
-  const goTo = (w) => setParams(w ? { week: w } : {});
   const hasDemo = data?.members.some((m) => m.isDemo);
 
   async function demo(method) {
@@ -108,13 +108,13 @@ export default function Team() {
     <AppShell
       eyebrow={data ? `Manager dashboard · ${formatDay(data.today)}` : 'Manager dashboard'}
       title="Your team"
-      actions={data && <WeekNav week={data.week} today={data.today} onChange={goTo} />}
+      actions={data && <PeriodNav period={data.period} today={data.today} onDate={p.setDate} onView={(v) => p.setView(v, data.period.start)} />}
     >
       {error && <p role="alert" className="text-red-700 dark:text-red-400">{error}</p>}
       {!data && !error && <p className="muted">Loading…</p>}
       {data && (
         <>
-          <Hero text={data.team.hero} label={`Team · ${formatRange(data.week.start, data.week.end)}`} />
+          <Hero text={data.team.hero} label={`Team · ${periodLabel(data.period)}`} />
           <Numbers numbers={data.team.numbers} />
           <AskAI members={data.members} />
           <section>
@@ -131,7 +131,7 @@ export default function Team() {
               <p className="card text-sm muted">No one reports to you yet. Add someone below, or add a sample employee to see how this page looks.</p>
             ) : (
               <ul className="grid gap-4 lg:grid-cols-2">
-                {data.members.map((m) => <MemberCard key={m.id} m={m} week={data.week.start} />)}
+                {data.members.map((m) => <MemberCard key={m.id} m={m} query={new URLSearchParams({ view: data.period.kind, date: data.period.start }).toString()} />)}
               </ul>
             )}
           </section>

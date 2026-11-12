@@ -17,7 +17,7 @@ router.use((req, res, next) => {
   next();
 });
 
-router.get('/', (req, res) => res.json(buildTeamSummary(req.me, req.query.week)));
+router.get('/', (req, res) => res.json(buildTeamSummary(req.me, req.query)));
 
 const clean = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
@@ -94,7 +94,7 @@ router.delete('/demo', (req, res) => {
 router.get('/:userId/overview', async (req, res) => {
   const member = /^\d+$/.test(req.params.userId) ? store.users.byId(req.params.userId) : null;
   if (!member || member.reportsTo !== req.me.id) return res.status(404).json({ error: 'That person is not on your team.' });
-  const data = await buildOverview(member, req.query.week, { forManager: true });
+  const data = await buildOverview(member, req.query, { forManager: true });
   res.json({ ...data, owner: { ...data.owner, id: member.id } });
 });
 

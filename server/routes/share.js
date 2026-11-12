@@ -33,7 +33,7 @@ manager.use(answerLimiter);
 manager.get('/:token', async (req, res) => {
   const ownerId = store.share.ownerByHash(hashToken(req.params.token));
   if (!ownerId) return res.status(404).json({ error: 'This link is not valid any more.' });
-  res.json(await buildOverview(store.users.byId(ownerId), req.query.week, { forManager: true }));
+  res.json(await buildOverview(store.users.byId(ownerId), req.query, { forManager: true }));
 });
 
 module.exports = { owner, manager };

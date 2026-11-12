@@ -9,7 +9,7 @@ const { dayOf, addDays, weekStartOf, weekEndOf } = require('./dates');
 const POINTS = { lot: 2, little: 1, none: 0 };
 
 const deliveredDay = (item) => (item.deliveredAt ? dayOf(new Date(item.deliveredAt)) : null);
-const inWeek = (day, start) => !!day && day >= start && day <= weekEndOf(start);
+const inRange = (day, start, end) => !!day && day >= start && day <= end;
 
 // What the item is, right now: due | late | unasked | waiting | lot | little | none | dropped
 function itemState(item, today) {
@@ -19,29 +19,29 @@ function itemState(item, today) {
   return item.askedAt ? 'waiting' : 'unasked';
 }
 
-function scoreWeek(items, weekStart) {
-  const end = weekEndOf(weekStart);
-
-  // Reliability: planned this week (dropped count as not delivered) and delivered by end of week.
-  const planned = items.filter((i) => inWeek(i.plannedDay, weekStart));
+// One period: a single day (start === end) or a week. The same formulas for both.
+function scorePeriod(items, start, end) {
+  // Reliability: planned in this period (dropped count as not delivered) and delivered by the end of it.
+  const planned = items.filter((i) => inRange(i.plannedDay, start, end));
   const deliveredOfPlanned = planned.filter((i) => {
     const d = deliveredDay(i);
     return i.status === 'delivered' && d && d <= end;
   }).length;
 
-  // Impact and answer rate: everything delivered this week, including late deliveries.
-  const delivered = items.filter((i) => i.status === 'delivered' && inWeek(deliveredDay(i), weekStart));
+  // Impact and answer rate: everything delivered in this period, including late deliveries.
+  const delivered = items.filter((i) => i.status === 'delivered' && inRange(deliveredDay(i), start, end));
   const answered = delivered.filter((i) => i.answer);
   const asked = delivered.filter((i) => i.askedAt);
   const askedAnswered = asked.filter((i) => i.answer).length;
   const count = (v) => answered.filter((i) => i.answer.value === v).length;
 
   return {
-    weekStart,
-    weekEnd: end,
+    kind: start === end ? 'day' : 'week',
+    start,
+    end,
     plannedCount: planned.length,
     deliveredOfPlanned,
-    deliveredThisWeek: delivered.length,
+    deliveredThisPeriod: delivered.length,
     impact: answered.reduce((sum, i) => sum + POINTS[i.answer.value], 0),
     reliability: planned.length ? Math.round((deliveredOfPlanned / planned.length) * 100) : null,
     answerRate: asked.length ? Math.round((askedAnswered / asked.length) * 100) : null,
@@ -54,17 +54,31 @@ function scoreWeek(items, weekStart) {
   };
 }
 
-function weekPrefix(weekStart, today) {
+const scoreDay = (items, day) => scorePeriod(items, day, day);
+
+function scoreWeek(items, weekStart) {
+  const s = scorePeriod(items, weekStart, weekEndOf(weekStart));
+  return { ...s, weekStart, weekEnd: s.end };
+}
+
+// "Today", "Yesterday", "This week"... for the sentence.
+function periodPrefix(s, today) {
+  if (s.kind === 'day') {
+    if (s.start === today) return 'Today';
+    if (s.start === addDays(today, -1)) return 'Yesterday';
+    if (s.start === addDays(today, 1)) return 'Tomorrow';
+    return `On ${s.start}`;
+  }
   const current = weekStartOf(today);
-  if (weekStart === current) return 'This week';
-  if (weekStart === addDays(current, -7)) return 'Last week';
-  if (weekStart > current) return 'Next week';
-  return `In the week of ${weekStart}`;
+  if (s.start === current) return 'This week';
+  if (s.start === addDays(current, -7)) return 'Last week';
+  if (s.start > current) return 'Next week';
+  return `In the week of ${s.start}`;
 }
 
 function heroSentence(ownerName, s, today, { team = false } = {}) {
   const first = team ? 'the team' : String(ownerName || 'They').split(' ')[0];
-  const prefix = weekPrefix(s.weekStart, today);
+  const prefix = periodPrefix(s, today);
   const head = s.plannedCount
     ? `${prefix} ${first} delivered ${s.deliveredOfPlanned} of ${s.plannedCount} planned things.`
     : `${prefix} ${first} had nothing planned.`;
@@ -78,20 +92,30 @@ function heroSentence(ownerName, s, today, { team = false } = {}) {
   return `${head} ${parts.join(', ')}.`;
 }
 
-const EXPLANATIONS = {
-  impact: 'Helped a lot = 2, a little = 1, didn’t help = 0, for things delivered this week.',
-  reliability: 'Planned for this week and delivered by Sunday, out of everything planned for this week.',
-  answerRate: 'How many of the people we asked have answered.',
-};
+// One-line explanations, worded for a day or a week.
+function explanations(kind = 'week') {
+  const day = kind === 'day';
+  return {
+    impact: `Helped a lot = 2, a little = 1, didn’t help = 0, for things delivered ${day ? 'that day' : 'this week'}.`,
+    reliability: day
+      ? 'Planned for that day and delivered by the end of that day, out of everything planned for that day.'
+      : 'Planned for this week and delivered by Sunday, out of everything planned for this week.',
+    answerRate: 'How many of the people we asked have answered.',
+  };
+}
+const EXPLANATIONS = explanations('week');
 
-// Combines several people's weekly scores into one team score, using the same formulas on the summed inputs.
-function teamScore(scores, weekStart) {
+// Combines several people's scores for the same period into one team score, using the same formulas on the summed inputs.
+function teamScore(scores, start, end = start) {
   const sum = (k) => scores.reduce((a, s) => a + s[k], 0);
   const planned = sum('plannedCount');
   const asked = sum('asked');
   return {
-    weekStart,
-    weekEnd: weekEndOf(weekStart),
+    kind: start === end ? 'day' : 'week',
+    start,
+    end,
+    weekStart: start,
+    weekEnd: end,
     plannedCount: planned,
     deliveredOfPlanned: sum('deliveredOfPlanned'),
     impact: sum('impact'),
@@ -104,21 +128,30 @@ function teamScore(scores, weekStart) {
   };
 }
 
-// The last `n` weeks ending at the current week, newest first.
-function weeklyTable(items, today, n = 8) {
-  const current = weekStartOf(today);
+// The recent history, newest first: the last 14 days, or the last 8 weeks.
+function history(items, today, kind = 'day') {
   const rows = [];
-  for (let k = 0; k < n; k += 1) rows.push(scoreWeek(items, addDays(current, -7 * k)));
+  if (kind === 'week') {
+    const current = weekStartOf(today);
+    for (let k = 0; k < 8; k += 1) rows.push(scoreWeek(items, addDays(current, -7 * k)));
+  } else {
+    for (let k = 0; k < 14; k += 1) rows.push(scoreDay(items, addDays(today, -k)));
+  }
   return rows;
 }
+const weeklyTable = (items, today, n = 8) => history(items, today, 'week').slice(0, n);
 
 module.exports = {
   POINTS,
   EXPLANATIONS,
+  explanations,
   deliveredDay,
   itemState,
+  scorePeriod,
+  scoreDay,
   scoreWeek,
   heroSentence,
   teamScore,
+  history,
   weeklyTable,
 };

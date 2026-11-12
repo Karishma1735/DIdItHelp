@@ -1,25 +1,25 @@
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import api from '../api';
 import Brand from '../components/Brand.jsx';
-import WeekView from '../components/WeekView.jsx';
-import WeekNav from '../components/WeekNav.jsx';
+import PeriodView from '../components/PeriodView.jsx';
+import PeriodNav from '../components/PeriodNav.jsx';
+import usePeriod from '../usePeriod.js';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 
 // Read-only page for a secret share link.
 export default function Manager() {
   const { token } = useParams();
-  const [params, setParams] = useSearchParams();
-  const week = params.get('week') || '';
+  const p = usePeriod();
   const [data, setData] = useState(null);
   const [invalid, setInvalid] = useState(false);
 
   useEffect(() => {
     api
-      .get(`/manager/${token}`, { params: week ? { week } : {} })
+      .get(`/manager/${token}`, { params: p.api })
       .then((r) => setData(r.data))
       .catch(() => setInvalid(true));
-  }, [token, week]);
+  }, [token, p.view, p.date]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (invalid) {
     return (
@@ -32,7 +32,6 @@ export default function Manager() {
   }
   if (!data) return <p className="p-6 muted">Loading…</p>;
 
-  const goTo = (w) => setParams(w ? { week: w } : {});
   return (
     <div>
       <div className="bg-steel-700 px-4 py-3 text-mist-50 dark:bg-steel-900 sm:px-8">
@@ -48,9 +47,9 @@ export default function Manager() {
             <h1 className="mt-1 text-3xl font-semibold sm:text-4xl">{data.owner.name}</h1>
             <p className="muted">{data.owner.role}</p>
           </div>
-          <WeekNav week={data.week} today={data.today} onChange={goTo} />
+          <PeriodNav period={data.period} today={data.today} onDate={p.setDate} onView={(v) => p.setView(v, data.period.start)} />
         </header>
-        <WeekView data={data} readOnly onItemChange={() => {}} onOpenWeek={goTo} />
+        <PeriodView data={data} readOnly onItemChange={() => {}} onOpenDate={p.setDate} />
       </main>
     </div>
   );

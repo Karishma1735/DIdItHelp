@@ -47,7 +47,7 @@ export default function ItemCard({ item, readOnly, onChange }) {
     });
 
   const drop = () => {
-    if (window.confirm('Drop this item? It will count as not delivered for its week.')) run(() => post('drop'));
+    if (window.confirm('Drop this item? It will count as not delivered for its day.')) run(() => post('drop'));
   };
 
   return (

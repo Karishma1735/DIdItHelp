@@ -48,7 +48,7 @@ export default function Join() {
       ) : (
         <form onSubmit={submit} className="card space-y-3">
           <h2 className="font-semibold">{info.managerName} invited you to join their team</h2>
-          <p className="text-sm muted">Create your account. {info.managerName} will be able to see your daily plan and weekly results.</p>
+          <p className="text-sm muted">Create your account. {info.managerName} will be able to see your daily plan and results.</p>
           <div><label className="label" htmlFor="name">Your name</label><input id="name" className="input" required value={form.name} onChange={set('name')} /></div>
           <div><label className="label" htmlFor="role">Your role</label><input id="role" className="input" value={form.role} onChange={set('role')} /></div>
           <div><label className="label" htmlFor="email">Email</label><input id="email" className="input" type="email" required autoComplete="email" value={form.email} onChange={set('email')} /></div>

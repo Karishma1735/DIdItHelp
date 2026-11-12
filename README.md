@@ -64,10 +64,14 @@ The **Team** page has an **Ask AI** panel (managers only; employees never see it
 - Item names and comments are written by people, so the prompt and the data both mark them as data, never instructions.
 - viaSocket's servers call these endpoints, so the app must be reachable from the internet (as on Embarko). The data a manager asks about is sent to viaSocket's AI service and the model provider when they ask. Employees' desks say so.
 
-### Scoring (per week, Monday to Sunday) — all in `server/lib/scoring.js`
+### Daily by default, weekly when you want it
 
-- **Impact** = sum of answers for items delivered that week: helped a lot = 2, a little = 1, didn't help = 0.
-- **Reliability** = items planned for that week and delivered by the end of that week ÷ items planned for that week. Dropped items count as not delivered. Late deliveries count as delivered, but not toward the reliability of the week they were planned for.
+Every page opens on **today**. A **Day | Week** switch, previous/next arrows and a "Today" button change the period; clicking a row in the history table or a bar in the chart opens that day. The address holds the choice (`?view=day|week&date=YYYY-MM-DD`; the old `?week=` still works). History is the last **14 days** (or 8 weeks). The manager's Team page, a person's read-only page, the share link and the manager AI all follow the same Day/Week choice, and the AI answers "today" unless asked about "yesterday", a date or a week.
+
+### Scoring (for a day or a week, Monday to Sunday) — all in `server/lib/scoring.js`
+
+- **Impact** = sum of answers for items delivered in the period (that day or week): helped a lot = 2, a little = 1, didn't help = 0.
+- **Reliability** = items planned for the period and delivered by the end of that period ÷ items planned for the period (for a day: planned that day and delivered by the end of that day). Dropped items count as not delivered. Late deliveries count as delivered (and toward the impact of the day they were delivered), but not toward the reliability of the period they were planned for.
 - **Answer rate** = answered ÷ asked.
 
 ### Rules that keep the numbers honest
@@ -222,7 +226,7 @@ If your host sleeps, add a flow on a daily schedule that calls `GET https://<APP
 | Route | Auth | What it does |
 | --- | --- | --- |
 | `POST /api/auth/register`, `/login` | rate-limited | Owner account (first account only) and sign-in |
-| `GET /api/overview?week=YYYY-MM-DD` | owner | Dashboard data |
+| `GET /api/overview?view=day\|week&date=YYYY-MM-DD` | owner | Dashboard data for a day (default) or a week |
 | `POST /api/items` | owner | Plan an item |
 | `POST /api/items/:id/deliver` `/ask` `/drop` `/message` | owner | Deliver with proof, ask again, drop, get the copyable message |
 | `GET/POST /api/answer/:token` | token, rate-limited | Answer page data and answers |

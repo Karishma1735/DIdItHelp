@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import api, { errorMessage } from '../api';
 import { useAuth } from '../auth.jsx';
 import AppShell from '../components/AppShell.jsx';
 import ManagerNote from '../components/ManagerNote.jsx';
 import GmailBanner from '../components/GmailBanner.jsx';
-import WeekView from '../components/WeekView.jsx';
-import WeekNav from '../components/WeekNav.jsx';
+import PeriodView from '../components/PeriodView.jsx';
+import PeriodNav from '../components/PeriodNav.jsx';
+import usePeriod from '../usePeriod.js';
 import PlanForm from '../components/PlanForm.jsx';
 import { formatDay } from '../dates.js';
 
@@ -18,38 +18,36 @@ function greeting(name) {
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [params, setParams] = useSearchParams();
-  const week = params.get('week') || '';
+  const p = usePeriod();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     try {
-      const { data } = await api.get('/overview', { params: week ? { week } : {} });
+      const { data } = await api.get('/overview', { params: p.api });
       setData(data);
       setError('');
     } catch (err) {
       setError(errorMessage(err, 'Could not load your dashboard.'));
     }
-  }, [week]);
+  }, [p.view, p.date]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load(); }, [load]);
-  const goTo = (w) => setParams(w ? { week: w } : {});
 
   return (
     <AppShell
       eyebrow={data ? `My desk · ${formatDay(data.today)}` : 'My desk'}
       title={greeting(user.name)}
-      actions={data && <WeekNav week={data.week} today={data.today} onChange={goTo} />}
+      actions={data && <PeriodNav period={data.period} today={data.today} onDate={p.setDate} onView={(v) => p.setView(v, data.period.start)} />}
     >
       <ManagerNote />
       <GmailBanner />
       {error && <p role="alert" className="text-red-700 dark:text-red-400">{error}</p>}
       {!data && !error && <p className="muted">Loading…</p>}
       {data && (
-        <WeekView data={data} readOnly={false} onItemChange={load} onOpenWeek={goTo}>
+        <PeriodView data={data} readOnly={false} onItemChange={load} onOpenDate={p.setDate}>
           <PlanForm today={data.today} mentorName={user.mentorName} onCreated={load} />
-        </WeekView>
+        </PeriodView>
       )}
     </AppShell>
   );
