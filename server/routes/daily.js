@@ -81,7 +81,11 @@ router.get('/digest', keyCheck, async (req, res) => {
     date: today,
     week: { start: weekStart, end: s.weekEnd },
     owner: { name: user.name },
-    mentor: { name: user.mentorName, contact: user.mentorContact },
+    // The weekly summary goes to the person's real manager if they have one, otherwise to the manager typed in Settings.
+    mentor: (() => {
+      const boss = store.users.managerOf(user.id);
+      return boss ? { name: boss.name, contact: boss.contact } : { name: user.mentorName, contact: user.mentorContact };
+    })(),
     hero,
     numbers,
     waiting,

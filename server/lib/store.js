@@ -210,6 +210,12 @@ const users = {
     return users.byId(r.lastInsertRowid);
   },
   update: (id, fields) => { update('users', USER_COLS, id, fields, false); return users.byId(id); },
+  // The person's real manager (who invited them) and the contact to reach that manager: reminder contact, else account email.
+  managerOf: (userId) => {
+    const u = users.byId(userId);
+    const m = u && u.reportsTo ? users.byId(u.reportsTo) : null;
+    return m ? { id: m.id, name: m.name, contact: (m.alertContact || m.email).trim() } : null;
+  },
   reportsOf: (managerId) =>
     db.prepare('SELECT * FROM users WHERE reports_to = ? ORDER BY name COLLATE NOCASE, id').all(Number(managerId)).map(userOut),
 };

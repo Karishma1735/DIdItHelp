@@ -57,10 +57,12 @@ router.post('/items', async (req, res) => {
   let contact = str(req.body.contact, 200);
 
   if (isForMentor) {
-    forWhom = user.mentorName;
-    contact = user.mentorContact;
+    // "For: my manager": the person's real manager if they have one, otherwise the manager typed in Settings.
+    const boss = store.users.managerOf(user.id);
+    forWhom = boss ? boss.name : user.mentorName;
+    contact = boss ? boss.contact : user.mentorContact;
     if (!forWhom || !contact) {
-      return res.status(400).json({ error: 'Add your mentor’s name and contact in Settings first.' });
+      return res.status(400).json({ error: 'Add your manager’s name and contact in Settings first.' });
     }
   }
   if (!what || !forWhom || !contact) {

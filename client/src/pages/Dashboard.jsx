@@ -46,7 +46,7 @@ export default function Dashboard() {
       {!data && !error && <p className="muted">Loading…</p>}
       {data && (
         <PeriodView data={data} readOnly={false} onItemChange={load} onOpenDate={p.setDate}>
-          <PlanForm today={data.today} mentorName={user.mentorName} onCreated={load} />
+          <PlanForm today={data.today} managerName={user.managerName || user.mentorName} onCreated={load} />
         </PeriodView>
       )}
     </AppShell>

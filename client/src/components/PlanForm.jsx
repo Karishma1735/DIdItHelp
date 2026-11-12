@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import api, { errorMessage } from '../api';
 
-export default function PlanForm({ today, mentorName, onCreated }) {
+export default function PlanForm({ today, managerName, onCreated }) {
   const empty = { what: '', forWhom: '', contact: '', plannedDay: today, deadlineTime: '17:00', isForMentor: false };
   const [form, setForm] = useState(empty);
   const [busy, setBusy] = useState(false);
@@ -32,7 +32,7 @@ export default function PlanForm({ today, mentorName, onCreated }) {
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={form.isForMentor} onChange={set('isForMentor')} />
-        For: my mentor{mentorName ? ` (${mentorName})` : ''} — no clear receiver, so the question goes to them
+        For: my manager{managerName ? ` (${managerName})` : ''}. No clear receiver, so the question goes to them
       </label>
       {!form.isForMentor && (
         <div className="grid gap-3 sm:grid-cols-2">

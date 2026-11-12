@@ -37,6 +37,10 @@ When marking something delivered, the proof is **a link** (PR, live flow, doc) *
 - **Anywhere else** (a developer's machine, Render) it is saved under `DATA_DIR/uploads/<random 128-bit id>/` and served by the app at `/files/<id>/<name>`, with `nosniff` and a sandboxing policy; images and PDFs open in the browser, other types download.
 - Anyone with a file's link can open it, so people are told not to upload secrets. Nothing is stored if the item was already delivered, dropped or not theirs.
 
+### Manager, not a separate mentor
+
+"For: my manager" goes to the person's **real manager** (whoever invited them): by name, to that manager's reminder contact or account email. The Friday summary goes to the same person. Settings shows the manager read-only. Only someone at the top of the team, who has no manager in the app, types a manager's name and contact in Settings (optional).
+
 ### Teams: My desk and Team
 
 - Every user has a **My desk** tab (planning, delivering, settings). Managers also get a **Team** tab.

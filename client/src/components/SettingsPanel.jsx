@@ -43,8 +43,19 @@ export default function SettingsPanel() {
       <form onSubmit={save} className="grid gap-3 sm:grid-cols-2">
         <div><label className="label" htmlFor="s-name">Your name</label><input id="s-name" className="input" value={form.name} onChange={set('name')} required /></div>
         <div><label className="label" htmlFor="s-role">Your role</label><input id="s-role" className="input" value={form.role} onChange={set('role')} /></div>
-        <div><label className="label" htmlFor="s-mn">Mentor’s name</label><input id="s-mn" className="input" value={form.mentorName} onChange={set('mentorName')} /></div>
-        <div><label className="label" htmlFor="s-mc">Mentor’s contact (Slack @name or email)</label><input id="s-mc" className="input" value={form.mentorContact} onChange={set('mentorContact')} /></div>
+        {user.managerName ? (
+          <div className="sm:col-span-2 rounded-xl bg-mist-100 p-3 dark:bg-ink-950/60">
+            <p className="label">Your manager</p>
+            <p className="font-display text-lg font-semibold">{user.managerName}</p>
+            <p className="mt-1 text-xs muted">This is the person who invited you. Questions marked “For: my manager” go to them, and their weekly summary is about you. Nothing to fill in here.</p>
+          </div>
+        ) : (
+          <>
+            <div><label className="label" htmlFor="s-mn">Manager’s name</label><input id="s-mn" className="input" value={form.mentorName} onChange={set('mentorName')} /></div>
+            <div><label className="label" htmlFor="s-mc">Manager’s contact (Slack @name or email)</label><input id="s-mc" className="input" value={form.mentorContact} onChange={set('mentorContact')} /></div>
+            <p className="sm:col-span-2 -mt-1 text-xs muted">You are at the top of the team, so enter whoever you report to (optional). Questions marked “For: my manager” and the weekly summary go to them.</p>
+          </>
+        )}
         <div className="sm:col-span-2"><label className="label" htmlFor="s-ac">Where should your reminders go? (Slack @name or email)</label><input id="s-ac" className="input" value={form.alertContact} onChange={set('alertContact')} placeholder={user.email} /><p className="mt-1 text-xs muted">The 10:00 “what will you deliver today?” prompt and deadline reminders go here. Leave it empty to use {user.email}.</p></div>
         <div className="sm:col-span-2 flex items-center gap-3">
           <button className="btn-primary">Save settings</button>
@@ -55,7 +66,7 @@ export default function SettingsPanel() {
 
       <div className="space-y-2 border-t border-ink-200 pt-4 dark:border-ink-800">
         <h3 className="font-semibold">Manager share link</h3>
-        <p className="text-sm muted">A read-only page for your manager or mentor. Creating a new link revokes the old one. The link is shown once, so copy it now.</p>
+        <p className="text-sm muted">A read-only page for your manager. Creating a new link revokes the old one. The link is shown once, so copy it now.</p>
         {share.url && (
           <div className="flex gap-2">
             <input className="input" readOnly value={share.url} onFocus={(e) => e.target.select()} />
