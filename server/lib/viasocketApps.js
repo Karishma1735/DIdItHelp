@@ -90,6 +90,23 @@ async function tidyFlowTitle(userId, slug) {
   } catch { /* cosmetic only */ }
 }
 
+// No viaSocket call may hang a request or a timed job: each send gets a time limit and then reports a plain failure.
+const LIMIT_MS = Number(process.env.VIASOCKET_CALL_LIMIT_MS || 20000);
+const guarded = (label, fn) => async (...args) => {
+  let timer;
+  try {
+    return await Promise.race([
+      fn(...args),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`${label} did not answer in time. Please try again.`)), LIMIT_MS); }),
+    ]);
+  } catch (err) {
+    console.error(`viaSocket ${label} failed:`, String(err.message).slice(0, 120)); // never the message or addresses
+    return { ok: false, reason: 'failed', error: friendly(err) };
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 // Every send returns { ok, reason?, error? } and never throws.
 //   reason: not_configured | not_connected | expired | not_found | ambiguous | failed
 async function ready(userId, slug) {
@@ -104,7 +121,7 @@ const failure = (out, fallback) =>
   String((out && out.errorMsg && out.errorMsg.message) || (out && out.message) || fallback).slice(0, 200);
 
 // Sends an email FROM the person's own connected Gmail.
-async function sendGmailAs(userId, { to, subject, body }) {
+const sendGmailAs = guarded('Gmail', async (userId, { to, subject, body }) => {
   try {
     const r = await ready(userId, 'gmail');
     if (!r.conn) return { ok: false, reason: r.reason === 'not_connected' ? 'no_gmail' : r.reason, error: r.error };
@@ -116,10 +133,10 @@ async function sendGmailAs(userId, { to, subject, body }) {
   } catch (err) {
     return { ok: false, reason: 'failed', error: friendly(err) };
   }
-}
+});
 
 // Finds exactly one person in the SENDER's Slack for a handle or name like "@rahul". Never guesses between several.
-async function findSlackUser(senderId, handle) {
+const findSlackUser = guarded('Slack lookup', async (senderId, handle) => {
   try {
     const r = await ready(senderId, 'slack');
     if (!r.conn) return { ok: false, reason: r.reason, error: r.error };
@@ -152,10 +169,10 @@ async function findSlackUser(senderId, handle) {
   } catch (err) {
     return { ok: false, reason: 'failed', error: friendly(err) };
   }
-}
+});
 
 // A direct message FROM the person's own Slack to one Slack user id.
-async function sendSlackDM(senderId, slackUserId, text) {
+const sendSlackDM = guarded('Slack', async (senderId, slackUserId, text) => {
   try {
     const r = await ready(senderId, 'slack');
     if (!r.conn) return { ok: false, reason: r.reason, error: r.error };
@@ -172,6 +189,6 @@ async function sendSlackDM(senderId, slackUserId, text) {
   } catch (err) {
     return { ok: false, reason: 'failed', error: friendly(err) };
   }
-}
+});
 
 module.exports = { FEATURED, serviceIdFor, iconFor, sendAction, connectionFor, runFailed, friendly, ensureEnabled, tidyFlowTitle, sendGmailAs, findSlackUser, sendSlackDM };

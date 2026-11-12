@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS notices (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id),
   kind TEXT NOT NULL, day TEXT NOT NULL, sent_at TEXT NOT NULL,
+  done INTEGER NOT NULL DEFAULT 0,
   UNIQUE (user_id, kind, day)
 );
 CREATE TABLE IF NOT EXISTS viasocket_connections (
@@ -108,6 +109,8 @@ if (!inviteCols.includes('contact')) {
 // else's connections. People who already existed keep their old id (their database number) so nothing disconnects.
 if (!userCols.includes('vs_id')) db.exec('ALTER TABLE users ADD COLUMN vs_id TEXT');
 db.exec('UPDATE users SET vs_id = CAST(id AS TEXT) WHERE vs_id IS NULL');
+const noticeCols = db.prepare('PRAGMA table_info(notices)').all().map((c) => c.name);
+if (noticeCols.length && !noticeCols.includes('done')) db.exec('ALTER TABLE notices ADD COLUMN done INTEGER NOT NULL DEFAULT 1'); // old rows were all sends that finished
 if (!userCols.includes('alert_contact')) db.exec("ALTER TABLE users ADD COLUMN alert_contact TEXT NOT NULL DEFAULT ''");
 const itemCols = db.prepare('PRAGMA table_info(items)').all().map((c) => c.name);
 if (!itemCols.includes('deadline_time')) {
@@ -353,8 +356,14 @@ const vsConn = {
 
 // "Already sent today" records, so a message is never sent twice for the same person, kind and day.
 const notices = {
-  claim: (userId, kind, day) =>
-    db.prepare('INSERT OR IGNORE INTO notices (user_id, kind, day, sent_at) VALUES (?,?,?,?)').run(Number(userId), kind, day, now()).changes === 1,
+  // Claim BEFORE sending. A claim that was never confirmed (a run that died mid-send) can be retaken after 10 minutes.
+  claim: (userId, kind, day) => {
+    if (db.prepare('INSERT OR IGNORE INTO notices (user_id, kind, day, sent_at, done) VALUES (?,?,?,?,0)').run(Number(userId), kind, day, now()).changes === 1) return true;
+    const stale = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    return db.prepare('UPDATE notices SET sent_at = ? WHERE user_id = ? AND kind = ? AND day = ? AND done = 0 AND sent_at < ?')
+      .run(now(), Number(userId), kind, day, stale).changes === 1;
+  },
+  confirm: (userId, kind, day) => db.prepare('UPDATE notices SET done = 1 WHERE user_id = ? AND kind = ? AND day = ?').run(Number(userId), kind, day),
   release: (userId, kind, day) => db.prepare('DELETE FROM notices WHERE user_id = ? AND kind = ? AND day = ?').run(Number(userId), kind, day),
 };
 
