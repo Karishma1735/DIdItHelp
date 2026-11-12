@@ -9,7 +9,7 @@ export default function ManagerNote() {
       <p className="text-sm font-semibold">Your manager is {user.managerName}</p>
       <p className="mt-1 text-sm muted">
         {user.managerName} can see your daily plan, what you delivered with its proof link, receivers’ answers and comments, and your weekly numbers.
-        They can’t change anything, and they never see your receivers’ Slack handles or emails.
+        They can’t change anything, and they never see your receivers’ Slack handles or emails. If {user.managerName} asks their AI assistant about your week, your plan and results are shared with that assistant to write the answer.
       </p>
     </section>
   );

@@ -37,6 +37,15 @@ The **Integrations** page lets each person connect their own apps through viaSoc
 - Each person connects only their own accounts. Their connection ids stay on the server and are never sent to a browser. The browser gets only a short-lived per-person token from `GET /api/viasocket/token`, signed with `VIASOCKET_EMBED_SECRET` (server only).
 - Needs `VIASOCKET_ORG_ID`, `VIASOCKET_PROJECT_ID` and `VIASOCKET_EMBED_SECRET` as server settings. The app's security rules allow `*.viasocket.com` for the embedded screens and the connect script.
 
+### AI assistant for managers
+
+The **Team** page has an **Ask AI** panel (managers only; employees never see it and the server refuses them). A manager asks in plain words, such as "give me Ankit's full report" or "who needs attention this week?", and the answer is written from the real reports: today, items with status, proof links, receivers' answers and comments, the three numbers and the last 8 weeks.
+
+- viaSocket runs the model (`gpt-6.1-terra`) and keeps the conversation; there is no model key in this app.
+- The AI can only call three read-only endpoints (`list_team`, `team_summary`, `employee_report`) under `/api/ai-tools`. Each call carries a 5-minute pass for ONE manager, signed with a key derived from `JWT_SECRET` (so it can never act as a login). The manager comes from the pass, never from the AI, and only that manager's direct reports are ever returned. Receivers' contacts are never included, and nothing can be changed.
+- Item names and comments are written by people, so the prompt and the data both mark them as data, never instructions.
+- viaSocket's servers call these endpoints, so the app must be reachable from the internet (as on Embarko). The data a manager asks about is sent to viaSocket's AI service and the model provider when they ask. Employees' desks say so.
+
 ### Scoring (per week, Monday to Sunday) — all in `server/lib/scoring.js`
 
 - **Impact** = sum of answers for items delivered that week: helped a lot = 2, a little = 1, didn't help = 0.
@@ -204,6 +213,8 @@ If your host sleeps, add a flow on a daily schedule that calls `GET https://<APP
 | `GET /api/team`, `/api/team/:userId/overview` | manager | Team dashboard and one report's read-only desk |
 | `GET/POST/DELETE /api/team/invites` | manager | Invite links for new team members |
 | `GET /api/viasocket/token`, `/status`, `/slack/people`; `POST /api/viasocket/connected`, `/slack/me`, `/test/:app` | signed in | The person's own viaSocket connections (Slack and Gmail) |
+| `POST /api/ai/ask`, `GET /api/ai/history` | manager | The manager's AI assistant |
+| `GET /api/ai-tools/list_team`, `/team_summary`, `/employee_report` | per-manager pass | Read-only tools the AI calls |
 | `GET /api/integrations` | manager | Read-only viaSocket wiring status (no secrets) |
 | `GET /api/auth/invite/:token` | rate-limited | Who invited you (join page) |
 | `GET /api/today`, `/api/digest`, `/api/jobs/reminders` | `?key=DIGEST_KEY` | For viaSocket schedules |

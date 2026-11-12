@@ -7,6 +7,7 @@ import Hero from '../components/Hero.jsx';
 import Numbers from '../components/Numbers.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import InvitePanel from '../components/InvitePanel.jsx';
+import AskAI from '../components/AskAI.jsx';
 import { formatDay, formatRange } from '../dates.js';
 
 const pct = (v) => (v === null || v === undefined ? '—' : `${v}%`);
@@ -112,6 +113,7 @@ export default function Team() {
         <>
           <Hero text={data.team.hero} label={`Team · ${formatRange(data.week.start, data.week.end)}`} />
           <Numbers numbers={data.team.numbers} />
+          <AskAI members={data.members} />
           <section>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-xl font-semibold">People</h2>

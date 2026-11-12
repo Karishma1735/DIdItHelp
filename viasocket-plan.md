@@ -54,7 +54,7 @@ Anything not run is listed as UNTESTED in the final report and is not switched o
 
 # viaSocket plan: an AI assistant for managers (feature `ai`)
 
-Status: proposed, waiting for a yes. Source: https://viasocket.com/docs/ai.md?format=sdk (read in full). Build parked: MSG91 alerts.
+Status: confirmed (yes, manager side only) and built. Source: https://viasocket.com/docs/ai.md?format=sdk (read in full). Build parked: MSG91 alerts.
 
 ## What a manager will see
 

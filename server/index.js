@@ -49,6 +49,8 @@ app.use('/api/share', require('./routes/share').owner);
 app.use('/api/team', require('./routes/team'));
 app.use('/api/integrations', require('./routes/integrations'));
 app.use('/api/viasocket', require('./routes/viasocket'));
+app.use('/api/ai-tools', require('./routes/aiTools')); // called by viaSocket's AI with a per-manager pass
+app.use('/api/ai', require('./routes/ai'));
 app.use('/api/manager', require('./routes/share').manager);
 app.use('/api', require('./routes/daily')); // /api/today, /api/digest, /api/jobs/reminders (key protected)
 app.use('/api', require('./routes/items'));
