@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import api, { errorMessage } from '../api';
 
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -8,6 +8,7 @@ export const sizeText = (n) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(
 // Marks one item delivered. The proof is a link or an uploaded file: with neither, nothing is sent.
 // Used by the item card and by the planner's "Mark delivered" cards.
 export default function ProofForm({ itemId, initialUrl = '', submitLabel = 'Mark delivered and ask', onDone, onCancel, autoFocus }) {
+  const uid = useId();
   const [proof, setProof] = useState(initialUrl);
   const [mode, setMode] = useState('link'); // a link, or an uploaded file
   const [file, setFile] = useState(null);
@@ -51,13 +52,13 @@ export default function ProofForm({ itemId, initialUrl = '', submitLabel = 'Mark
       </div>
       {mode === 'link' ? (
         <>
-          <label className="sr-only" htmlFor={`proof-${itemId}`}>Proof link</label>
-          <input id={`proof-${itemId}`} className="input" type="url" required placeholder="https:// (PR, live flow or doc)" value={proof} onChange={(e) => setProof(e.target.value)} autoFocus={autoFocus} />
+          <label className="sr-only" htmlFor={`${uid}-proof`}>Proof link</label>
+          <input id={`${uid}-proof`} className="input" type="url" required placeholder="https:// (PR, live flow or doc)" value={proof} onChange={(e) => setProof(e.target.value)} autoFocus={autoFocus} />
         </>
       ) : (
         <>
-          <label className="sr-only" htmlFor={`file-${itemId}`}>Proof file</label>
-          <input id={`file-${itemId}`} className="input file:mr-3 file:rounded-md file:border-0 file:bg-steel-700 file:px-3 file:py-1 file:text-sm file:font-semibold file:text-mist-50" type="file" accept={ACCEPT} onChange={(e) => { setFile(e.target.files[0] || null); setError(''); }} />
+          <label className="sr-only" htmlFor={`${uid}-file`}>Proof file</label>
+          <input id={`${uid}-file`} className="input file:mr-3 file:rounded-md file:border-0 file:bg-steel-700 file:px-3 file:py-1 file:text-sm file:font-semibold file:text-mist-50" type="file" accept={ACCEPT} onChange={(e) => { setFile(e.target.files[0] || null); setError(''); }} />
           {file && <p className="text-xs muted">{file.name} · {sizeText(file.size)}</p>}
           <p className="text-xs muted">Images, PDF, text, CSV, zip or short videos, up to 20 MB. For Word or Excel files, use a zip or paste a link. Anyone with the link can open the file, so don’t upload secrets.</p>
         </>

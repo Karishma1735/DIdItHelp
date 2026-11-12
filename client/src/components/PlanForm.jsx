@@ -39,8 +39,7 @@ export default function PlanForm({ today, defaultDay, managerName, onCreated }) 
   }
 
   return (
-    <form onSubmit={submit} className="card space-y-3">
-      <h2 className="text-lg font-bold">Plan something to deliver</h2>
+    <form onSubmit={submit} className="space-y-3">
       <div>
         <label className="label" htmlFor="what">What will you deliver?</label>
         <input id="what" className="input" required maxLength={300} value={form.what} onChange={set('what')} placeholder="Zoho plug" />

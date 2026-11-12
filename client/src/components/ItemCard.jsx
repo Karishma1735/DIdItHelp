@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { errorMessage } from '../api';
 import StatusBadge from './StatusBadge.jsx';
-import ProofForm, { sizeText } from './ProofForm.jsx';
+import PlannedActions from './PlannedActions.jsx';
+import { sizeText } from './ProofForm.jsx';
 import { formatDay, formatWhen, fmtMinutes } from '../dates.js';
 
 const isImage = (name) => /\.(png|jpe?g|gif|webp)$/i.test(name);
@@ -11,7 +12,6 @@ export default function ItemCard({ item, readOnly, onChange }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
-  const [proofOpen, setProofOpen] = useState(false);
 
   async function run(fn) {
     setBusy(true);
@@ -38,10 +38,6 @@ export default function ItemCard({ item, readOnly, onChange }) {
         window.prompt('Copy this message:', data.text);
       }
     });
-
-  const drop = () => {
-    if (window.confirm('Drop this item? It will count as not delivered for its day.')) run(() => post('drop'));
-  };
 
   return (
     <li className="card space-y-2">
@@ -103,25 +99,12 @@ export default function ItemCard({ item, readOnly, onChange }) {
       {error && <p role="alert" className="text-sm text-red-700 dark:text-red-400">{error}</p>}
       {note && <p className="text-sm text-leaf-700 dark:text-leaf-300">{note}</p>}
 
-      {!readOnly && (
+      {!readOnly && item.status === 'planned' && <PlannedActions item={item} onChange={onChange} />}
+      {!readOnly && item.status === 'delivered' && (
         <div className="flex flex-wrap gap-2 pt-1">
-          {item.status === 'planned' && !proofOpen && (
-            <>
-              <button className="btn-primary" onClick={() => setProofOpen(true)}>Mark delivered and ask</button>
-              <button className="btn-ghost" onClick={drop} disabled={busy}>Drop</button>
-            </>
-          )}
-          {item.status === 'delivered' && (
-            <>
-              <button className="btn-ghost" onClick={() => run(() => post('ask'))} disabled={busy}>Ask again</button>
-              <button className="btn-ghost" onClick={copyMessage} disabled={busy}>Copy message</button>
-            </>
-          )}
+          <button className="btn-ghost" onClick={() => run(() => post('ask'))} disabled={busy}>Ask again</button>
+          <button className="btn-ghost" onClick={copyMessage} disabled={busy}>Copy message</button>
         </div>
-      )}
-
-      {!readOnly && proofOpen && (
-        <ProofForm itemId={item.id} autoFocus onCancel={() => setProofOpen(false)} onDone={(updated) => { setProofOpen(false); onChange(updated); }} />
       )}
     </li>
   );

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import api, { errorMessage } from '../api';
+import PlannedActions from './PlannedActions.jsx';
 import { fmtMinutes } from '../dates.js';
 
 const KINDS = [['meeting', 'Meeting'], ['learning', 'Learning'], ['support', 'Support'], ['admin', 'Admin'], ['other', 'Other']];
@@ -129,6 +130,9 @@ export default function DayHours({ data, readOnly, onChange }) {
                 : <span className="text-xs muted">{e.status === 'delivered' ? 'Delivered' : 'Task'}</span>}
               <span className="text-xs muted">{fmtMinutes(e.minutes)}</span>
               {e.type === 'block' && removeButton(e.id, e.label)}
+              {e.type === 'task' && e.status === 'planned' && !readOnly && (
+                <div className="basis-full pl-0 sm:pl-[7.75rem]"><PlannedActions item={{ id: e.id }} onChange={onChange} small /></div>
+              )}
             </li>
           ))}
           {unscheduled.map((b) => (

@@ -200,3 +200,5 @@ The AI never creates, changes or sends anything itself. Its answer is data that 
 3. Safety: the AI is told to ignore instructions inside the person's words; every field is validated; an id from someone else's items is refused; no task is marked complete without a proof link or file.
 4. Hours: planned, unplanned, over-8h warning, blocks counted, scoring unchanged, managers see hours.
 5. `npx -y viasocket-apps check`.
+
+Change after the owner's feedback (built the same day): planning is a choice between "Plan with AI" and "Add by hand" in one card, and the "Finished something?" AI box was removed. Finishing uses the existing "Mark delivered and ask" and "Drop" buttons, which now also appear on the timeline. The planner makes one AI call (draft); `/api/planner/complete` is gone.

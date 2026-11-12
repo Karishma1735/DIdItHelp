@@ -1,5 +1,4 @@
-// The AI day planner. It only drafts and matches; creating items and delivering work still go through the normal,
-// validated routes, after the person clicks.
+// The AI day planner. It only drafts a day; creating items still goes through the normal, validated routes, after the person clicks.
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const store = require('../lib/store');
@@ -30,12 +29,6 @@ router.post('/draft', limiter, async (req, res) => {
   const r = await planner.draft(store.users.byId(req.userId), req.body.text, day);
   if (!r.ok) return res.status(r.status).json({ error: r.error });
   res.json(r.draft);
-});
-
-router.post('/complete', limiter, async (req, res) => {
-  const r = await planner.matchFinished(store.users.byId(req.userId), req.body.text);
-  if (!r.ok) return res.status(r.status).json({ error: r.error });
-  res.json({ matches: r.matches });
 });
 
 module.exports = router;

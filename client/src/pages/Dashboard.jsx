@@ -7,8 +7,7 @@ import GmailBanner from '../components/GmailBanner.jsx';
 import PeriodView from '../components/PeriodView.jsx';
 import PeriodNav from '../components/PeriodNav.jsx';
 import usePeriod from '../usePeriod.js';
-import PlanForm from '../components/PlanForm.jsx';
-import PlanAssistant from '../components/PlanAssistant.jsx';
+import PlanDesk from '../components/PlanDesk.jsx';
 import { formatDay } from '../dates.js';
 
 function greeting(name) {
@@ -47,16 +46,13 @@ export default function Dashboard() {
       {!data && !error && <p className="muted">Loading…</p>}
       {data && (
         <PeriodView data={data} readOnly={false} onItemChange={load} onOpenDate={p.setDate}>
-          {data.period.kind === 'day' && data.period.start >= data.today && (
-            <PlanAssistant
-              day={data.period.start}
-              isToday={data.period.start === data.today}
-              hasOpen={data.todaySection.planned.length + data.todaySection.late.length > 0}
-              managerName={user.managerName || user.mentorName}
-              onChange={load}
-            />
-          )}
-          <PlanForm today={data.today} defaultDay={data.period.kind === 'day' && data.period.start >= data.today ? data.period.start : data.today} managerName={user.managerName || user.mentorName} onCreated={load} />
+          {/* Planning is always available. On a week or a past day it plans for today. */}
+          <PlanDesk
+            day={data.period.kind === 'day' && data.period.start >= data.today ? data.period.start : data.today}
+            today={data.today}
+            managerName={user.managerName || user.mentorName}
+            onChange={load}
+          />
         </PeriodView>
       )}
     </AppShell>

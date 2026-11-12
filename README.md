@@ -35,10 +35,10 @@ Every day is **8 hours for everyone** (`WORKDAY_MINUTES`, default 480). Hours ar
 
 - **Tasks** have a receiver and are scored as before. They now also carry a **time needed**, a **start time** and (as the deadline) the **end of their slot**. The time and the start time are fixed once planned, like the day and the deadline (a database trigger refuses any change).
 - **Blocks** are meetings, learning, support, admin and other time with no receiver. They count toward the 8 hours, show on the timeline and are **never scored**. Add and remove them on the day card (today or later).
-- **Plan my day (AI):** in the morning the person types their plan in plain words ("CRM plugs for Rahul 2h, docs for Priya 1h, standup at 10:30 for 30 min, learn Rust 1.5h, no receiver"). The AI separates tasks from blocks, reads the durations, and the server lays them out on a **timeline** from 09:00 (or from now, if later): lunch 13:00–14:00 is left free, a fixed clock time like a standup is honoured, nothing overlaps what is already on the day, and anything that does not fit before midnight gets no slot instead of a wrong one. The person sees an **editable draft** (every field, the start times, the receiver, a live hours total, overlap warnings and the AI's questions) and **nothing is created until they click "Add to my plan"**. Each row is then created through the normal validated routes.
-- **Finished something?** The person tells the AI "CRM plugs done, proof https://…". The AI only **proposes** matches against that person's own open items and shows a "Mark delivered" card for each. A **task is never marked complete without a proof link or an uploaded file**: with no link the card asks for one, and the person confirms with a click. The AI never creates, changes, delivers or sends anything itself.
+- **Plan my day** is one card with two ways to plan, chosen with a switch (the choice is remembered in the browser): **Plan with AI** or **Add by hand**. With AI, in the morning the person types their plan in plain words ("CRM plugs for Rahul 2h, docs for Priya 1h, standup at 10:30 for 30 min, learn Rust 1.5h, no receiver"). The AI separates tasks from blocks, reads the durations, and the server lays them out on a **timeline** from 09:00 (or from now, if later): lunch 13:00–14:00 is left free, a fixed clock time like a standup is honoured, nothing overlaps what is already on the day, and anything that does not fit before midnight gets no slot instead of a wrong one. The person sees an **editable draft** (every field, the start times, the receiver, a live hours total, overlap warnings and the AI's questions) and **nothing is created until they click "Add to my plan"**. Each row is then created through the normal validated routes.
+- **Finishing work** uses the same buttons everywhere: **Mark delivered and ask** (a proof link or an uploaded file is required, then the receiver is asked) and **Drop**. They sit on each item and also on each open task of the timeline, so work can be closed right where it is planned. There is no AI step for this: nothing can be marked delivered without a proof, and only the person's click does it.
 
-How it is kept safe (`server/lib/planner.js`): the person's text goes to the AI as the *message*, never inside the instructions, and is cut at 4,000 characters; the AI has no tools; its answer must match a JSON schema and is then validated again (at most 12 tasks and 12 blocks, lengths cut, minutes 5–480 or an assumed hour when none is given, contacts must be an email or a Slack @name or are dropped with a question, an id that is not that person's open item is dropped, proof links must be http or https). A hung or failing AI gives a plain message and the manual form still works. Each request is a fresh AI thread and the person's words are never written to the logs. It uses viaSocket's built-in AI (`user.ai.send`), so there is no model key to manage.
+How it is kept safe (`server/lib/planner.js`): the person's text goes to the AI as the *message*, never inside the instructions, and is cut at 4,000 characters; the AI has no tools; its answer must match a JSON schema and is then validated again (at most 12 tasks and 12 blocks, lengths cut, minutes 5–480 or an assumed hour when none is given, contacts must be an email or a Slack @name or are dropped with a question). A hung or failing AI gives a plain message and the manual form still works. Each request is a fresh AI thread and the person's words are never written to the logs. It uses viaSocket's built-in AI (`user.ai.send`), so there is no model key to manage.
 
 ### Proof: a link or an uploaded file
 
@@ -252,7 +252,7 @@ If your host sleeps, add a flow on a daily schedule that calls `GET https://<APP
 | `GET /api/overview?view=day\|week&date=YYYY-MM-DD` | owner | Dashboard data for a day (default) or a week |
 | `POST /api/items` | owner | Plan an item (optionally with `estimateMinutes` and `startTime`) |
 | `POST /api/blocks`, `DELETE /api/blocks/:id` | owner | Add or remove meeting, learning or support time on a day (never scored) |
-| `POST /api/planner/draft`, `/api/planner/complete` | owner, rate-limited | The AI day planner: draft a day from text, and match finished work to open items. Neither creates anything |
+| `POST /api/planner/draft` | owner, rate-limited | The AI day planner: draft a day from text. It creates nothing |
 | `POST /api/items/:id/deliver-file?name=` | owner | Deliver with an uploaded file as proof (raw file as the body) |
 | `POST /api/items/:id/deliver` `/ask` `/drop` `/message` | owner | Deliver with proof, ask again, drop, get the copyable message |
 | `GET/POST /api/answer/:token` | token, rate-limited | Answer page data and answers |
@@ -276,7 +276,7 @@ server/   Express + SQLite (node:sqlite); dependencies live in the root package.
   lib/store.js     database schema and queries
   lib/scoring.js   all scoring logic
   lib/hours.js     the 8-hour day: hours picture, timeline, slot layout (never part of a score)
-  lib/planner.js   the AI day planner: draft + match finished work, with validation
+  lib/planner.js   the AI day planner: draft a day from text, with validation
   lib/viasocket.js the only code that calls viaSocket
   jobs/reminders.js reminder logic (run daily by the host's scheduler)
 ```

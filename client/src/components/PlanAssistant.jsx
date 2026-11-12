@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import api, { errorMessage } from '../api';
-import ProofForm from './ProofForm.jsx';
 import { endOf, fmtMinutes, formatDay, toMin } from '../dates.js';
 
 const KINDS = [['meeting', 'Meeting'], ['learning', 'Learning'], ['support', 'Support'], ['admin', 'Admin'], ['other', 'Other']];
@@ -133,26 +132,7 @@ function DraftHours({ hours, newMinutes }) {
   );
 }
 
-// One finished-work match: the person confirms it by clicking. A task is never marked done without a link or a file.
-function MatchCard({ match, onDone, onDismiss }) {
-  return (
-    <li className="space-y-2 rounded-xl border border-mist-300 bg-mist-50 p-3 dark:border-ink-800 dark:bg-ink-950/50">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="font-semibold">{match.what}</p>
-          <p className="text-sm muted">For {match.forWhom}</p>
-        </div>
-        <button type="button" className="btn-ghost !px-2.5 !py-1 text-xs" onClick={onDismiss}>Not this one</button>
-      </div>
-      {match.needsProof
-        ? <p className="text-sm text-amber-800 dark:text-amber-300">You didn’t give a proof link. Add a link or upload a file below. A task is never marked delivered without proof.</p>
-        : <p className="text-sm muted">I found this link in what you wrote. Check it, then confirm.</p>}
-      <ProofForm itemId={match.itemId} initialUrl={match.proofUrl || ''} submitLabel="Mark delivered and ask" onDone={onDone} />
-    </li>
-  );
-}
-
-export default function PlanAssistant({ day, isToday, hasOpen, managerName, onChange }) {
+export default function PlanAssistant({ day, managerName, onChange }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -161,11 +141,6 @@ export default function PlanAssistant({ day, isToday, hasOpen, managerName, onCh
   const [rows, setRows] = useState([]);
   const [adding, setAdding] = useState(false);
 
-  const [doneText, setDoneText] = useState('');
-  const [doneBusy, setDoneBusy] = useState(false);
-  const [doneError, setDoneError] = useState('');
-  const [matches, setMatches] = useState(null);
-  const [doneNote, setDoneNote] = useState('');
 
   async function makeDraft(e) {
     e.preventDefault();
@@ -245,46 +220,14 @@ export default function PlanAssistant({ day, isToday, hasOpen, managerName, onCh
     }
   }
 
-  async function findFinished(e) {
-    e.preventDefault();
-    setDoneBusy(true);
-    setDoneError('');
-    setDoneNote('');
-    try {
-      const { data } = await api.post('/planner/complete', { text: doneText }, { timeout: 70000 });
-      setMatches(data.matches);
-    } catch (err) {
-      setMatches(null);
-      setDoneError(errorMessage(err, 'The planner did not answer. You can mark a task delivered on its own card below.'));
-    } finally {
-      setDoneBusy(false);
-    }
-  }
-
-  const dismiss = (id) => {
-    const left = matches.filter((m) => m.itemId !== id);
-    setMatches(left.length ? left : null);
-    return left;
-  };
-  const confirmed = (id) => {
-    if (!dismiss(id).length) { setDoneText(''); setDoneNote('Marked delivered and asked. Check the item below to see how the question went.'); }
-    onChange();
-  };
-
   const overlaps = overlapsOf(rows);
   const newMinutes = rows.reduce((s, r) => s + (Number(r.minutes) || 0), 0);
 
   return (
-    <section className="card space-y-4" aria-label="AI day planner">
-      <div>
-        <h2 className="flex items-baseline gap-3 text-xl font-semibold">
-          Plan my day
-          <span className="font-mono text-xs font-normal uppercase tracking-wider muted">AI planner · {formatDay(day)}</span>
-        </h2>
-        <p className="mt-1 text-sm muted">
-          Write what you will do and how long each thing takes, in your own words. I will split tasks from meetings, put them on a timeline and show you a draft. Nothing is added until you click “Add to my plan”.
-        </p>
-      </div>
+    <div className="space-y-4">
+      <p className="text-sm muted">
+        Write what you will do and how long each thing takes, in your own words. I will split tasks from meetings, put them on a timeline and show you a draft. Nothing is added until you click “Add to my plan”.
+      </p>
 
       {!draft && (
         <form onSubmit={makeDraft} className="space-y-2">
@@ -325,26 +268,6 @@ export default function PlanAssistant({ day, isToday, hasOpen, managerName, onCh
         </div>
       )}
 
-      {isToday && hasOpen && (
-        <div className="space-y-3 border-t border-mist-300 pt-4 dark:border-ink-800">
-          <h3 className="text-lg font-semibold">Finished something?</h3>
-          <p className="text-sm muted">Tell me what is done and paste the proof link, like “CRM plugs done, proof https://…”. I will find the task. You confirm it, and I never mark anything delivered myself.</p>
-          <form onSubmit={findFinished} className="space-y-2">
-            <label className="label" htmlFor="done-text">What did you finish?</label>
-            <textarea id="done-text" className="input min-h-[4.5rem]" required maxLength={4000} value={doneText} onChange={(e) => setDoneText(e.target.value)} placeholder="CRM plugs are done, proof is https://github.com/…" />
-            <button className="btn-ghost" disabled={doneBusy || !doneText.trim()}>{doneBusy ? 'Looking…' : 'Find the task'}</button>
-          </form>
-          {doneError && <p role="alert" className="text-sm text-red-700 dark:text-red-400">{doneError}</p>}
-          {doneNote && <p role="status" className="text-sm font-medium text-leaf-700 dark:text-leaf-300">{doneNote}</p>}
-          {matches && (
-            <ul className="space-y-3" aria-label="Tasks I found">
-              {matches.map((m) => (
-                <MatchCard key={m.itemId} match={m} onDone={() => confirmed(m.itemId)} onDismiss={() => dismiss(m.itemId)} />
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </section>
+    </div>
   );
 }
