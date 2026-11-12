@@ -153,3 +153,50 @@ Status: confirmed by the owner ("yes") and built. Replaces the idea of three sha
 Left out on purpose everywhere: `from`, `cc`, `bcc`, `fromName`, `replyTo`, `attachments`, `labelIds`, `destination.channel_id`, thread and schedule keys.
 
 Tested: every decision (own account first, backup flow, clear errors, no silent fallback, once-only, no retry storm) with stubbed sends; the Slack lookup against real viaSocket data (read-only). UNTESTED until the owner clicks the Integrations test buttons and sends one real ask: the real Slack/Gmail sends.
+
+---
+
+# Plan: AI day planner with hours and a timeline (feature `ai`)
+
+Status: proposed, waiting for a yes. Owner's choices (asked): every day is 8 hours; under 8h is a warning, not a rule; meetings, learning and support count towards the 8 hours; managers see hours. Wanted: the person types their tasks in the morning, the AI separates them, adds a timeline and, as work is finished, helps mark it complete.
+
+## What the person will see
+
+1. **Morning:** a box on My desk: "Tell me what you will do today". They type freely, for example: "CRM plugs for Rahul, about 2h. Fix the docs for Priya, 1h. Standup 30 min. Learning Rust 1.5h." The AI splits it into separate tasks and blocks, with the time each takes, who it is for, and a **timeline** (start to end for each, in order, with a lunch gap). It shows a **draft**; the person can edit anything, then clicks **Add to my plan**. Nothing is created until that click.
+2. **The day bar:** "Planned 6h 30m of 8h, 1h 30m still unplanned", amber when under or over 8h. A warning only. The timeline lists the day in order.
+3. **As work finishes:** they tell the AI "CRM plugs are done, proof is https://…". It matches that to the open items and shows **Mark delivered** cards. One click delivers it, asks the receiver, and (in the evening) emails the manager, exactly as today. **A task without a proof link or file is never marked complete**: the AI asks for the proof. Files are still attached on the item.
+
+Everything else stays as it is now: deadlines and reminders, the receiver's Helped / Didn't help, scoring, reports.
+
+## How each value is decided (who supplies it, and when)
+
+| step | AI action | what the AI returns | who checks it | when |
+| --- | --- | --- | --- | --- |
+| Draft the plan | `user.ai.send` with `json_schema`, no tools, model `openai` / `gpt-6-luna` (viaSocket's pick for extracting fields) | per task: what, minutes, who it is for, how to reach them, whether it is "my manager"; per block: title, minutes; questions where something is missing | the product's code validates every field; the person reviews and edits | per morning request |
+| Timeline | none: plain code | start and end for each, in order, from now or 09:00, skipping a 13:00 to 14:00 lunch; each task's **deadline = the end of its slot** | the person can change a start time in the draft | per draft |
+| Match finished work | `user.ai.send` with `json_schema`, given only that person's open items for today | per finished item: its id and the proof link if one was given | the product refuses an id that is not that person's open item, and any link that is not http(s); the person clicks to confirm | per request |
+
+The AI never creates, changes or sends anything itself. Its answer is data that code checks and the person approves. The person's own words are treated as data, never as instructions. A task with no receiver (learning, internal tools) is offered as "For: my manager", as now.
+
+## What gets added
+
+- Each task gets a time estimate and a start time (set when planned, fixed like the deadline). Old items keep working with no estimate.
+- **Blocks** (meetings, learning, support, admin): time with no receiver. They count towards the 8 hours and appear on the timeline, never in Impact, Reliability or Answer rate. They can be removed (nothing is scored on them).
+- Managers see "6h 30m of 8h planned" on each person's card, with an amber warning when it is under or over, and the evening report shows planned and delivered hours. Hours are a coverage check, never a score and never ranked.
+- The manager AI can answer "who hasn't filled their day?". The morning prompt says how many hours are still unplanned.
+
+## Things I am assuming (say if any is wrong)
+
+1. The work day is **8 hours of work**, not counting lunch; the timeline leaves **13:00 to 14:00** free. Planning starts at the later of 09:00 and now (rounded to 15 minutes).
+2. A task's deadline becomes the end of its slot, so the reminder arrives when its slot ends.
+3. Without a stated time, a task is assumed to take 1 hour and the AI marks it as assumed.
+4. The AI needs the day's date and time zone, the person's name and manager's name, and what they already planned today. It does not get anyone's contacts except what the person types in this request.
+5. Cost: viaSocket bills these AI calls; each is small.
+
+## Tests before anything is switched on
+
+1. Parsing: a messy paragraph with 5 to 6 tasks and blocks becomes separate items with correct minutes; missing receivers become questions; nothing is invented.
+2. Timeline: slots never overlap, skip lunch, deadline = slot end, and the total matches the minutes.
+3. Safety: the AI is told to ignore instructions inside the person's words; every field is validated; an id from someone else's items is refused; no task is marked complete without a proof link or file.
+4. Hours: planned, unplanned, over-8h warning, blocks counted, scoring unchanged, managers see hours.
+5. `npx -y viasocket-apps check`.
