@@ -23,7 +23,7 @@ const sendLimiter = rateLimit({
 });
 
 const {
-  FEATURED, serviceIdFor, iconFor, sendAction, connectionFor, runFailed, friendly,
+  FEATURED, serviceIdFor, iconFor, sendAction, connectionFor, runFailed, friendly, ensureEnabled, tidyFlowTitle,
 } = require('../lib/viasocketApps');
 
 const featuredSlug = (req, res) => {
@@ -55,6 +55,7 @@ router.get('/status', async (req, res) => {
     const apps = [];
     for (const slug of Object.keys(FEATURED)) {
       const conn = await connectionFor(req.userId, slug);
+      if (conn) tidyFlowTitle(req.userId, slug); // cosmetic: readable title instead of the app's id
       const saved = store.vsConn.get(req.userId, slug);
       apps.push({
         app: slug,
@@ -164,8 +165,7 @@ router.post('/test/:app', sendLimiter, async (req, res) => {
         messageBody: 'This is a test email from Did it help?, sent only to you. Your Gmail is connected.',
       };
     }
-    const user = scopeFor(req.userId);
-    const scriptId = (await user.findEnabled(slug)) ?? (await user.enable(slug, conn.id)).scriptId;
+    const scriptId = await ensureEnabled(req.userId, slug, conn);
     const out = await getClient().runAction(scriptId, act.key, inputData, { version: act.version });
     if (runFailed(out)) {
       const msg = (out.errorMsg && out.errorMsg.message) || out.message || 'The app refused the message.';

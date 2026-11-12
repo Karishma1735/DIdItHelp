@@ -23,7 +23,7 @@ router.get('/', (req, res) => {
         name: 'Ask message',
         env: 'VIASOCKET_ASK_WEBHOOK_URL',
         configured: set('VIASOCKET_ASK_WEBHOOK_URL'),
-        purpose: 'Sends “Did it help?” with three one-tap links to the receiver when you mark something delivered or ask again, plus one reminder after 2 days.',
+        purpose: 'Backup for the “Did it help?” ask. The app sends it from the person’s own connected Slack or Gmail. This shared flow is used only when the sender has neither connected.',
         fields: ['channel', 'to', 'receiverName', 'ownerName', 'what', 'proofUrl', 'answerUrl', 'lotUrl', 'littleUrl', 'noneUrl', 'isReminder'],
       },
       {
@@ -31,7 +31,7 @@ router.get('/', (req, res) => {
         name: 'Morning prompt and deadline reminder',
         env: 'VIASOCKET_REMINDER_WEBHOOK_URL',
         configured: set('VIASOCKET_REMINDER_WEBHOOK_URL'),
-        purpose: 'Every weekday at 10:00 asks each person who has not planned yet “What will you deliver today?”, and reminds a person once when an item’s deadline passes without delivery. Goes to their Slack @name or email.',
+        purpose: 'Backup for the 10:00 “What will you deliver today?” prompt and the deadline reminder. The app sends them to each person from their own connected Slack or Gmail. This shared flow is used only for people who have neither connected.',
         fields: ['kind', 'channel', 'to', 'receiverName', 'dashboardUrl', 'what', 'forWhom', 'deadline', 'plannedDay'],
       },
       {
@@ -39,7 +39,7 @@ router.get('/', (req, res) => {
         name: 'Team invite',
         env: 'VIASOCKET_INVITE_WEBHOOK_URL',
         configured: set('VIASOCKET_INVITE_WEBHOOK_URL'),
-        purpose: 'Sends a new teammate their invite link on Slack or email when you add them on the Team page.',
+        purpose: 'Backup for team invites. The app sends them from the manager’s own connected Slack or Gmail. This shared flow is used only when the manager has neither connected.',
         fields: ['kind', 'channel', 'to', 'receiverName', 'managerName', 'joinUrl', 'expiresAt', 'isManager'],
       },
     ],

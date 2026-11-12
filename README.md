@@ -12,13 +12,22 @@ A mentor or manager opens a read-only link and sees what you are doing today and
 2. **Deliver**: mark it delivered with a proof link (PR, live flow, doc). No proof, no delivery.
 3. **Confirm**: the server posts to your viaSocket flow, which messages the receiver: "Hi Rahul, I delivered “Zoho plug”. Did it help you?" with three one-tap links. The receiver taps one.
 
+### Who sends each message
+
+Messages go out from **the person's own connected Slack or Gmail** (Integrations page), through viaSocket. In order:
+1. **The sender's own account:** the "Did it help?" ask and its 2-day reminder from the person who delivered; team invites from the manager; the morning prompt and deadline reminder to the person themself (their Slack DM using the "which one is you" choice, or their own Gmail, or the reminder contact in Settings).
+2. **The shared viaSocket flows** (`VIASOCKET_ASK_WEBHOOK_URL`, `VIASOCKET_INVITE_WEBHOOK_URL`, `VIASOCKET_REMINDER_WEBHOOK_URL`) are only a **backup** for a sender who has nothing connected.
+3. **A clear error** if neither works (the item or invite says what to do). Nothing is dropped silently.
+
+A Slack @name is matched to exactly one person in the sender's own Slack. If nobody or several people match, the message is not sent and the error says so; it never falls back to a different account and never guesses. People who can't be reached by any route are counted once and not retried every 5 minutes.
+
 ### The daily rhythm: plan, deadline, report
 
 1. **Morning (10:00 on weekdays):** everyone who hasn't planned yet today gets "What will you deliver today?" on their Slack or email (set in Settings, default their account email). Each item is planned with a **deadline time** (default 17:00). The day and the deadline can't be changed afterwards. Managers see "Hasn't planned today yet" on a person's card.
 2. **Deadline:** when an item's deadline passes without delivery, the person gets **one** reminder (checked every 5 minutes, so within about 5 minutes). It is claimed in the database before it is sent, so it can never go twice; if viaSocket fails it is retried on the next check.
 3. **Submit:** when someone marks an item delivered in the evening (from `REPORT_FROM_HOUR`, default 16:00), their manager is emailed from **that person's own Gmail**: the item, its proof link and the day so far (delivered, still open, late). It never includes receivers' contact details. If the person hasn't connected Gmail (or it expired), nothing is sent, the item says "Report not emailed: connect your Gmail", and their desk shows a banner.
 
-The morning prompt and deadline reminder use the viaSocket flow at `VIASOCKET_REMINDER_WEBHOOK_URL`. Create it like the other flows: a **Webhook** trigger, a Condition on `channel`, then Slack **Send message** or Gmail **Send email**, using `kind` to choose the wording (`morning_plan`: "What will you deliver today? {dashboardUrl}"; `deadline`: "Your deadline for {what} ({deadline}) has passed. {dashboardUrl}"). Payload: `{ kind, channel, to, receiverName, dashboardUrl, day?, what?, forWhom?, deadline?, plannedDay? }`. On Embarko, `embarko.json` runs `/tasks/tick` every 5 minutes; elsewhere call `GET /api/jobs/tick?key=<DIGEST_KEY>` on a 5-minute schedule.
+The morning prompt and deadline reminder go from each person's own accounts (see above); the viaSocket flow at `VIASOCKET_REMINDER_WEBHOOK_URL` is only the backup for people with nothing connected. Create it like the other flows: a **Webhook** trigger, a Condition on `channel`, then Slack **Send message** or Gmail **Send email**, using `kind` to choose the wording (`morning_plan`: "What will you deliver today? {dashboardUrl}"; `deadline`: "Your deadline for {what} ({deadline}) has passed. {dashboardUrl}"). Payload: `{ kind, channel, to, receiverName, dashboardUrl, day?, what?, forWhom?, deadline?, plannedDay? }`. On Embarko, `embarko.json` runs `/tasks/tick` every 5 minutes; elsewhere call `GET /api/jobs/tick?key=<DIGEST_KEY>` on a 5-minute schedule.
 
 ### Teams: My desk and Team
 

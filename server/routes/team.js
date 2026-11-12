@@ -4,7 +4,8 @@ const store = require('../lib/store');
 const { requireAuth } = require('../middleware/auth');
 const { generateToken, hashToken } = require('../lib/tokens');
 const { buildOverview, buildTeamSummary } = require('../lib/overview');
-const { appUrl, sendInvite } = require('../lib/viasocket');
+const { appUrl } = require('../lib/viasocket');
+const { sendInvite } = require('../lib/messenger');
 const { seedDemo } = require('../lib/demo');
 
 const router = express.Router();
@@ -46,7 +47,7 @@ async function createAndSend(me, { label, contact, makeManager }) {
   const url = `${appUrl()}/join/${raw}`;
   let sent = null;
   if (contact) {
-    const r = await sendInvite({ contact, name: label, managerName: me.name, joinUrl: url, expiresAt: invite.expiresAt, makeManager });
+    const r = await sendInvite({ senderId: me.id, contact, name: label, managerName: me.name, joinUrl: url, expiresAt: invite.expiresAt, makeManager });
     store.invites.setSent(invite.id, r.ok ? { sentAt: new Date().toISOString(), sentVia: r.channel } : { sendError: r.error });
     sent = { ok: r.ok, channel: r.channel, error: r.ok ? undefined : r.error };
   }

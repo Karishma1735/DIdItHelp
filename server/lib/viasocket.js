@@ -71,13 +71,12 @@ async function postToViaSocket(payload, envName = 'VIASOCKET_ASK_WEBHOOK_URL') {
   }
 }
 
-async function sendAsk(item, owner, isReminder = false) {
-  const links = await createAnswerLinks(item.id);
+async function sendAskViaWebhook(item, owner, links, isReminder = false) {
   return postToViaSocket(buildPayload(item, owner, links, isReminder));
 }
 
 // Sends a team invite link to the new person's Slack or email through a separate viaSocket flow.
-async function sendInvite({ contact, name, managerName, joinUrl, expiresAt, makeManager }) {
+async function sendInviteViaWebhook({ contact, name, managerName, joinUrl, expiresAt, makeManager }) {
   return postToViaSocket(
     {
       kind: 'invite',
@@ -95,7 +94,7 @@ async function sendInvite({ contact, name, managerName, joinUrl, expiresAt, make
 
 // Reminders to a person about their OWN day: the morning prompt and the deadline reminder.
 // Goes to the person's reminder contact (Slack @name or email), by default their account email.
-async function sendReminder(user, extra) {
+async function sendReminderViaWebhook(user, extra) {
   const contact = (user.alertContact || user.email).trim();
   return postToViaSocket(
     { channel: channelFor(contact), to: contact, receiverName: user.name, dashboardUrl: appUrl(), ...extra },
@@ -103,4 +102,4 @@ async function sendReminder(user, extra) {
   );
 }
 
-module.exports = { appUrl, channelFor, createAnswerLinks, messageText, sendAsk, sendInvite, sendReminder };
+module.exports = { appUrl, channelFor, createAnswerLinks, messageText, postToViaSocket, sendAskViaWebhook, sendInviteViaWebhook, sendReminderViaWebhook };

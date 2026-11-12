@@ -23,7 +23,7 @@ router.get('/reminders', async (req, res) => {
 router.get('/tick', async (req, res) => {
   if (!authorised(req)) return res.sendStatus(401);
   const r = await runTick();
-  res.send(`Morning: sent ${r.morning.sent}, failed ${r.morning.failed}. Deadlines: sent ${r.deadlines.sent}, failed ${r.deadlines.failed}`);
+  res.send(`Morning: sent ${r.morning.sent}, failed ${r.morning.failed}, unreachable ${r.morning.unreachable}. Deadlines: sent ${r.deadlines.sent}, failed ${r.deadlines.failed}, unreachable ${r.deadlines.unreachable}`);
 });
 
 module.exports = router;

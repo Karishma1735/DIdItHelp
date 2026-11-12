@@ -1,5 +1,5 @@
 const store = require('../lib/store');
-const { sendAsk } = require('../lib/viasocket');
+const { sendAsk } = require('../lib/messenger');
 
 const TWO_DAYS = 2 * 24 * 60 * 60 * 1000;
 

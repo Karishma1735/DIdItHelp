@@ -63,23 +63,115 @@ async function connectionFor(userId, slug) {
 }
 
 
-// Sends an email FROM the person's own connected Gmail. Never throws: returns { ok, reason, error }.
-//   reason: 'not_configured' | 'no_gmail' | 'expired' | 'failed'
-async function sendGmailAs(userId, { to, subject, body }) {
-  if (!getClient()) return { ok: false, reason: 'not_configured', error: 'viaSocket is not set up on the server.' };
+// Enables the app once for the person and gives viaSocket's flow a readable title (it would otherwise show the app's id).
+const titled = new Set();
+async function ensureEnabled(userId, slug, conn) {
+  const user = scopeFor(userId);
+  const scriptId = (await user.findEnabled(slug)) ?? (await user.enable(slug, conn.id)).scriptId;
+  if (!titled.has(scriptId)) {
+    titled.add(scriptId);
+    user.renameFlow(scriptId, { title: `${FEATURED[slug].name} (used by Did it help?)` }).catch(() => {});
+  }
+  return scriptId;
+}
+
+// Gives an already-enabled app's flow its readable title, once per person and app per run of the server.
+async function tidyFlowTitle(userId, slug) {
+  const key = `${userId}:${slug}`;
+  if (titled.has(key)) return;
+  titled.add(key);
   try {
-    const conn = await connectionFor(userId, 'gmail');
-    if (!conn) return { ok: false, reason: 'no_gmail', error: 'Gmail is not connected.' };
-    if (conn.isExpired) return { ok: false, reason: 'expired', error: 'The Gmail connection expired.' };
-    const act = await sendAction('gmail');
     const user = scopeFor(userId);
-    const scriptId = (await user.findEnabled('gmail')) ?? (await user.enable('gmail', conn.id)).scriptId;
+    const scriptId = await user.findEnabled(slug);
+    if (scriptId && !titled.has(scriptId)) {
+      titled.add(scriptId);
+      await user.renameFlow(scriptId, { title: `${FEATURED[slug].name} (used by Did it help?)` });
+    }
+  } catch { /* cosmetic only */ }
+}
+
+// Every send returns { ok, reason?, error? } and never throws.
+//   reason: not_configured | not_connected | expired | not_found | ambiguous | failed
+async function ready(userId, slug) {
+  if (!getClient()) return { reason: 'not_configured', error: 'viaSocket is not set up on the server.' };
+  const conn = await connectionFor(userId, slug);
+  if (!conn) return { reason: 'not_connected', error: `${FEATURED[slug].name} is not connected.` };
+  if (conn.isExpired) return { reason: 'expired', error: `The ${FEATURED[slug].name} connection expired.` };
+  return { conn };
+}
+
+const failure = (out, fallback) =>
+  String((out && out.errorMsg && out.errorMsg.message) || (out && out.message) || fallback).slice(0, 200);
+
+// Sends an email FROM the person's own connected Gmail.
+async function sendGmailAs(userId, { to, subject, body }) {
+  try {
+    const r = await ready(userId, 'gmail');
+    if (!r.conn) return { ok: false, reason: r.reason === 'not_connected' ? 'no_gmail' : r.reason, error: r.error };
+    const act = await sendAction('gmail');
+    const scriptId = await ensureEnabled(userId, 'gmail', r.conn);
     const out = await getClient().runAction(scriptId, act.key, { to, subject, messageBody: body }, { version: act.version });
-    if (runFailed(out)) return { ok: false, reason: 'failed', error: String((out.errorMsg && out.errorMsg.message) || out.message || 'Gmail refused the email.').slice(0, 200) };
+    if (runFailed(out)) return { ok: false, reason: 'failed', error: failure(out, 'Gmail refused the email.') };
     return { ok: true };
   } catch (err) {
     return { ok: false, reason: 'failed', error: friendly(err) };
   }
 }
 
-module.exports = { FEATURED, serviceIdFor, iconFor, sendAction, connectionFor, runFailed, friendly, sendGmailAs };
+// Finds exactly one person in the SENDER's Slack for a handle or name like "@rahul". Never guesses between several.
+async function findSlackUser(senderId, handle) {
+  try {
+    const r = await ready(senderId, 'slack');
+    if (!r.conn) return { ok: false, reason: r.reason, error: r.error };
+    const q = String(handle).replace(/^@/, '').trim();
+    if (!q) return { ok: false, reason: 'not_found', error: 'No Slack name was given.' };
+    const act = await sendAction('slack');
+    // viaSocket may or may not filter by the search text, so filter here too, and follow the pages (at most 5).
+    const norm = (x) => String(x).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const want = norm(q);
+    const people = [];
+    let paginate;
+    for (let page = 0; page < 5; page += 1) {
+      const res = await scopeFor(senderId).listOptions('slack', act.key, {
+        fieldKey: 'destination.userId',
+        authId: r.conn.id,
+        version: act.version,
+        existingFields: { destination: { messageto: 'user' } },
+        search: q,
+        paginate,
+      });
+      people.push(...res.options);
+      if (!res.hasMore || res.paginate == null) break;
+      paginate = res.paginate;
+    }
+    const exact = people.filter((o) => norm(o.label) === want);
+    const pool = exact.length ? exact : people.filter((o) => want && norm(o.label).includes(want));
+    if (pool.length === 1) return { ok: true, id: String(pool[0].value), label: pool[0].label };
+    if (!pool.length) return { ok: false, reason: 'not_found', error: `No one called “${q}” was found in your Slack.` };
+    return { ok: false, reason: 'ambiguous', error: `More than one person in your Slack matches “${q}” (${pool.slice(0, 4).map((o) => o.label).join(', ')}). Use their email instead, or their full Slack name.` };
+  } catch (err) {
+    return { ok: false, reason: 'failed', error: friendly(err) };
+  }
+}
+
+// A direct message FROM the person's own Slack to one Slack user id.
+async function sendSlackDM(senderId, slackUserId, text) {
+  try {
+    const r = await ready(senderId, 'slack');
+    if (!r.conn) return { ok: false, reason: r.reason, error: r.error };
+    const act = await sendAction('slack');
+    const scriptId = await ensureEnabled(senderId, 'slack', r.conn);
+    const out = await getClient().runAction(
+      scriptId,
+      act.key,
+      { destination: { messageto: 'user', userId: [String(slackUserId)] }, markdown_content: text },
+      { version: act.version }
+    );
+    if (runFailed(out)) return { ok: false, reason: 'failed', error: failure(out, 'Slack refused the message.') };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, reason: 'failed', error: friendly(err) };
+  }
+}
+
+module.exports = { FEATURED, serviceIdFor, iconFor, sendAction, connectionFor, runFailed, friendly, ensureEnabled, tidyFlowTitle, sendGmailAs, findSlackUser, sendSlackDM };

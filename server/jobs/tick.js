@@ -3,14 +3,14 @@
 // If viaSocket fails, the claim is released and the next run tries again.
 const store = require('../lib/store');
 const dates = require('../lib/dates');
-const { sendReminder } = require('../lib/viasocket');
+const { sendReminder } = require('../lib/messenger');
 
 const MORNING_HOUR = () => Number(process.env.MORNING_HOUR || 10);
 const MORNING_UNTIL = 14; // a missed morning prompt is still sent until 14:00, then dropped
 
 async function runTick(now = new Date()) {
   const t = dates.localParts(now);
-  const out = { morning: { sent: 0, failed: 0 }, deadlines: { sent: 0, failed: 0 } };
+  const out = { morning: { sent: 0, failed: 0, unreachable: 0 }, deadlines: { sent: 0, failed: 0, unreachable: 0 } };
 
   // Morning: everyone with nothing planned for today, on weekdays, once.
   if (t.weekday && t.hour >= MORNING_HOUR() && t.hour < MORNING_UNTIL) {
@@ -18,6 +18,7 @@ async function runTick(now = new Date()) {
       if (!store.notices.claim(user.id, 'morning_plan', t.day)) continue;
       const r = await sendReminder(user, { kind: 'morning_plan', day: t.day });
       if (r.ok) out.morning.sent += 1;
+      else if (r.reason === 'no_channel') out.morning.unreachable += 1; // nothing to retry: keep the claim for today
       else {
         out.morning.failed += 1;
         store.notices.release(user.id, 'morning_plan', t.day);
@@ -33,6 +34,7 @@ async function runTick(now = new Date()) {
       ? await sendReminder(owner, { kind: 'deadline', what: item.what, forWhom: item.forWhom, deadline: item.deadlineTime, plannedDay: item.plannedDay })
       : { ok: false };
     if (r.ok) out.deadlines.sent += 1;
+    else if (r.reason === 'no_channel') out.deadlines.unreachable += 1;
     else {
       out.deadlines.failed += 1;
       store.items.releaseDeadlineReminder(item.id);

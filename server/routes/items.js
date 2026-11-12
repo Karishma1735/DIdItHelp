@@ -2,7 +2,8 @@ const express = require('express');
 const store = require('../lib/store');
 const dates = require('../lib/dates');
 const { requireAuth } = require('../middleware/auth');
-const { sendAsk, createAnswerLinks, messageText } = require('../lib/viasocket');
+const { createAnswerLinks, messageText } = require('../lib/viasocket');
+const { sendAsk } = require('../lib/messenger');
 const { buildOverview, loadItems, serializeItem } = require('../lib/overview');
 const { emailManagerReport } = require('../lib/report');
 

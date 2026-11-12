@@ -136,3 +136,20 @@ Who picks the action: the product's code, on delivery. The Gmail connection used
 2. A person without Gmail: item shows "not emailed", the banner appears, nothing crashes, the delivery still succeeds.
 3. UNTESTED until an employee connects their own Gmail: the real `Send_Email` from their account. The one click is theirs; I will not send from a stranger's account.
 4. `npx -y viasocket-apps check` over the code.
+
+
+---
+
+# Plan: send from each person's own Slack or Gmail (feature `app-integrations`)
+
+Status: confirmed by the owner ("yes") and built. Replaces the idea of three shared viaSocket flows; they remain as a backup.
+
+| message | sent by | sent to | app and action | who supplies the values | when |
+| --- | --- | --- | --- | --- | --- |
+| "Did it help?" ask and its 2-day reminder | the person who delivered | the receiver (email, or one matched Slack person) | gmail `Send_Email` v55 / slack `Send_Message` v107 | the product (question, proof, three one-tap links); the Slack person is matched by name inside the sender's own Slack, never guessed | per ask |
+| team invite | the manager | the new person | same | the product (join link) | per invite |
+| morning prompt, deadline reminder | the person themself | themself | same | the product; Slack uses the "which one is you" choice stored after Connect | per run |
+
+Left out on purpose everywhere: `from`, `cc`, `bcc`, `fromName`, `replyTo`, `attachments`, `labelIds`, `destination.channel_id`, thread and schedule keys.
+
+Tested: every decision (own account first, backup flow, clear errors, no silent fallback, once-only, no retry storm) with stubbed sends; the Slack lookup against real viaSocket data (read-only). UNTESTED until the owner clicks the Integrations test buttons and sends one real ask: the real Slack/Gmail sends.
