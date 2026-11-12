@@ -43,6 +43,7 @@ app.use(express.json({ limit: '20kb' }));
 
 app.get('/healthz', (req, res) => res.json({ ok: true }));
 app.use('/tasks', require('./routes/tasks'));
+app.use('/files', require('./routes/localFiles')); // proof files stored on this server (see lib/files.js)
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/answer', require('./routes/answers'));
 app.use('/api/share', require('./routes/share').owner);
@@ -64,6 +65,7 @@ if (fs.existsSync(dist)) {
 }
 
 app.use((err, req, res, next) => {
+  if (err && err.type === 'entity.too.large') return res.status(413).json({ error: 'That file is too large. The limit is 20 MB.' });
   console.error(err);
   res.status(500).json({ error: 'Something went wrong on our side.' });
 });

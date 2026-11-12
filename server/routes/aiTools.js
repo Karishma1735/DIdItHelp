@@ -96,6 +96,7 @@ router.get('/employee_report', async (req, res) => {
       deliveredAt: i.deliveredAt,
       deliveredLate: i.deliveredLate,
       proofUrl: i.proofUrl || null,
+      proofIsUploadedFile: i.proofFile ? i.proofFile.name : null,
       askedAt: i.askedAt,
       askedVia: i.askedVia,
       reminderSentAt: i.reminderSentAt,

@@ -21,6 +21,7 @@ function info(item) {
     receiverName: item.forWhom,
     ownerName: owner ? owner.name : '',
     proofUrl: item.proofUrl,
+    proofName: item.proofFileName || null,
     deliveredAt: item.deliveredAt,
     answer: answer ? { value: answer.value, comment: answer.comment } : null,
   };

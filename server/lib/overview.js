@@ -24,6 +24,7 @@ function serializeItem(item, today, { forManager = false } = {}) {
     status: item.status,
     state: scoring.itemState(item, today),
     proofUrl: item.proofUrl,
+    proofFile: item.proofFileName ? { name: item.proofFileName, size: item.proofFileSize } : null,
     createdAt: item.createdAt,
     deliveredAt: item.deliveredAt,
     deliveredLate: !!delivered && delivered > item.plannedDay,

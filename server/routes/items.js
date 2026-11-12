@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const store = require('../lib/store');
 const dates = require('../lib/dates');
 const { requireAuth } = require('../middleware/auth');
@@ -6,6 +7,7 @@ const { createAnswerLinks, messageText } = require('../lib/viasocket');
 const { sendAsk } = require('../lib/messenger');
 const { buildOverview, loadItems, serializeItem } = require('../lib/overview');
 const { emailManagerReport } = require('../lib/report');
+const files = require('../lib/files');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -80,18 +82,62 @@ router.post('/items', async (req, res) => {
 // No PATCH route exists for items on purpose: the planned day can't be edited
 // (the database also refuses it with a trigger).
 
+// Marks the item delivered with its proof, asks the receiver, and (in the evening) emails the manager.
+async function finishDelivery(req, res, item, proof) {
+  item = store.items.update(item.id, { status: 'delivered', deliveredAt: new Date().toISOString(), ...proof });
+  item = await askAndRecord(item, store.users.byId(req.userId));
+  await emailManagerReport(item); // evening submissions are emailed to the manager; never blocks the delivery
+  await reply(res, item);
+}
+
+// Proof as a link (PR, live flow, doc).
 router.post('/items/:id/deliver', async (req, res) => {
-  let item = findOwned(req, res);
+  const item = findOwned(req, res);
   if (!item) return;
   if (item.status !== 'planned') return res.status(409).json({ error: 'This item is already delivered or dropped.' });
   const proofUrl = str(req.body.proofUrl, 1000);
   if (!isHttpUrl(proofUrl)) {
-    return res.status(400).json({ error: 'Add a proof link (PR, live flow or doc) starting with http:// or https://.' });
+    return res.status(400).json({ error: 'Add a proof link (PR, live flow or doc) starting with http:// or https://, or upload a file.' });
   }
-  item = store.items.update(item.id, { status: 'delivered', proofUrl, deliveredAt: new Date().toISOString() });
-  item = await askAndRecord(item, store.users.byId(req.userId));
-  await emailManagerReport(item); // evening submissions are emailed to the manager; never blocks the delivery
-  await reply(res, item);
+  await finishDelivery(req, res, item, { proofUrl });
+});
+
+// Proof as an uploaded file: the raw file is the request body, its name is in ?name=. Stored once, linked as the proof.
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `u${req.userId}`,
+  message: { error: 'Too many uploads. Please try again in a while.' },
+});
+
+router.post('/items/:id/deliver-file', uploadLimiter, express.raw({ type: '*/*', limit: files.MAX_BYTES + 1024 }), async (req, res) => {
+  const item = findOwned(req, res);
+  if (!item) return;
+  // Check the state BEFORE storing anything, so a refused delivery never leaves an orphan file behind.
+  if (item.status !== 'planned') return res.status(409).json({ error: 'This item is already delivered or dropped.' });
+  const checked = files.check(str(req.query.name, 300), req.body);
+  if (!checked.ok) return res.status(400).json({ error: checked.error });
+
+  let stored;
+  try {
+    stored = await files.save(req.body, checked.name);
+  } catch (err) {
+    return res.status(502).json({ error: err.message });
+  }
+  try {
+    await finishDelivery(req, res, item, {
+      proofUrl: stored.url,
+      proofFileName: checked.name,
+      proofFileId: stored.id,
+      proofFileSize: req.body.length,
+      proofStorage: stored.storage,
+    });
+  } catch (err) {
+    await files.remove(stored.storage, stored.id);
+    throw err;
+  }
 });
 
 router.post('/items/:id/ask', async (req, res) => {

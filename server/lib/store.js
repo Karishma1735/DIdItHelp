@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS items (
   ask_error TEXT NOT NULL DEFAULT '',
   reminder_sent_at TEXT, answered_at TEXT,
   deadline_time TEXT NOT NULL DEFAULT '17:00',
+  proof_file_name TEXT, proof_file_id TEXT, proof_file_size INTEGER, proof_storage TEXT,
   deadline_reminder_sent_at TEXT,
   report_sent_at TEXT, report_error TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL, updated_at TEXT NOT NULL
@@ -138,6 +139,12 @@ if (!itemCols.includes('deadline_time')) {
   db.exec('ALTER TABLE items ADD COLUMN report_sent_at TEXT');
   db.exec("ALTER TABLE items ADD COLUMN report_error TEXT NOT NULL DEFAULT ''");
 }
+if (!itemCols.includes('proof_file_name')) {
+  db.exec('ALTER TABLE items ADD COLUMN proof_file_name TEXT');
+  db.exec('ALTER TABLE items ADD COLUMN proof_file_id TEXT');
+  db.exec('ALTER TABLE items ADD COLUMN proof_file_size INTEGER');
+  db.exec('ALTER TABLE items ADD COLUMN proof_storage TEXT');
+}
 // The deadline time, like the planned day, can never be edited.
 db.exec(`
 DROP TRIGGER IF EXISTS items_deadline_immutable;
@@ -169,6 +176,7 @@ const itemOut = (r) =>
     isForMentor: !!r.is_for_mentor, plannedDay: r.planned_day, status: r.status, proofUrl: r.proof_url,
     deliveredAt: r.delivered_at, droppedAt: r.dropped_at, askedAt: r.asked_at, askedVia: r.asked_via,
     askError: r.ask_error, reminderSentAt: r.reminder_sent_at, answeredAt: r.answered_at,
+    proofFileName: r.proof_file_name, proofFileId: r.proof_file_id, proofFileSize: r.proof_file_size, proofStorage: r.proof_storage,
     deadlineTime: r.deadline_time, deadlineReminderSentAt: r.deadline_reminder_sent_at,
     reportSentAt: r.report_sent_at, reportError: r.report_error,
     createdAt: r.created_at, updatedAt: r.updated_at,
@@ -179,6 +187,7 @@ const ITEM_COLS = {
   status: 'status', proofUrl: 'proof_url', deliveredAt: 'delivered_at', droppedAt: 'dropped_at',
   askedAt: 'asked_at', askedVia: 'asked_via', askError: 'ask_error',
   reminderSentAt: 'reminder_sent_at', answeredAt: 'answered_at',
+  proofFileName: 'proof_file_name', proofFileId: 'proof_file_id', proofFileSize: 'proof_file_size', proofStorage: 'proof_storage',
   deadlineReminderSentAt: 'deadline_reminder_sent_at', reportSentAt: 'report_sent_at', reportError: 'report_error',
 };
 

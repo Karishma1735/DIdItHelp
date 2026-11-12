@@ -29,6 +29,14 @@ A Slack @name is matched to exactly one person in the sender's own Slack. If nob
 
 The morning prompt and deadline reminder go from each person's own accounts (see above); the viaSocket flow at `VIASOCKET_REMINDER_WEBHOOK_URL` is only the backup for people with nothing connected. Create it like the other flows: a **Webhook** trigger, a Condition on `channel`, then Slack **Send message** or Gmail **Send email**, using `kind` to choose the wording (`morning_plan`: "What will you deliver today? {dashboardUrl}"; `deadline`: "Your deadline for {what} ({deadline}) has passed. {dashboardUrl}"). Payload: `{ kind, channel, to, receiverName, dashboardUrl, day?, what?, forWhom?, deadline?, plannedDay? }`. On Embarko, `embarko.json` runs `/tasks/tick` every 5 minutes; elsewhere call `GET /api/jobs/tick?key=<DIGEST_KEY>` on a 5-minute schedule.
 
+### Proof: a link or an uploaded file
+
+When marking something delivered, the proof is **a link** (PR, live flow, doc) **or an uploaded file**. Allowed: png, jpg, jpeg, gif, webp, pdf, txt, md, csv, zip, mp4, webm, up to 20 MB (the app checks that the file really is what its extension says; html, svg, scripts and executables are refused; for Word or Excel use a zip or a link). The file is stored once and the receiver, the manager and the AI all just see its link:
+
+- **On Embarko** it goes to the app's file store (`STORAGE_URL` / `STORAGE_TOKEN` / `APP_NAME`, set by Embarko), which returns a public, unguessable link. A full store gives a clear message and the item stays undelivered.
+- **Anywhere else** (a developer's machine, Render) it is saved under `DATA_DIR/uploads/<random 128-bit id>/` and served by the app at `/files/<id>/<name>`, with `nosniff` and a sandboxing policy; images and PDFs open in the browser, other types download.
+- Anyone with a file's link can open it, so people are told not to upload secrets. Nothing is stored if the item was already delivered, dropped or not theirs.
+
 ### Teams: My desk and Team
 
 - Every user has a **My desk** tab (planning, delivering, settings). Managers also get a **Team** tab.
@@ -226,6 +234,7 @@ If your host sleeps, add a flow on a daily schedule that calls `GET https://<APP
 | `POST /api/auth/register`, `/login` | rate-limited | Owner account (first account only) and sign-in |
 | `GET /api/overview?view=day\|week&date=YYYY-MM-DD` | owner | Dashboard data for a day (default) or a week |
 | `POST /api/items` | owner | Plan an item |
+| `POST /api/items/:id/deliver-file?name=` | owner | Deliver with an uploaded file as proof (raw file as the body) |
 | `POST /api/items/:id/deliver` `/ask` `/drop` `/message` | owner | Deliver with proof, ask again, drop, get the copyable message |
 | `GET/POST /api/answer/:token` | token, rate-limited | Answer page data and answers |
 | `GET/POST/DELETE /api/share` | owner | Manager link status, create, revoke |
