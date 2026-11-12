@@ -15,7 +15,7 @@ export default function HistoryTable({ history, kind, activeStart, onOpen }) {
             <th className="pr-3">Reliability</th>
             <th className="pr-3">Impact</th>
             <th className="pr-3">Answer rate</th>
-            <th>Helped a lot</th>
+            <th>Said it helped</th>
           </tr>
         </thead>
         <tbody>
@@ -30,7 +30,7 @@ export default function HistoryTable({ history, kind, activeStart, onOpen }) {
               <td className="pr-3">{pct(w.reliability)}</td>
               <td className="pr-3">{w.impact} pts</td>
               <td className="pr-3">{pct(w.answerRate)}</td>
-              <td>{w.lot}</td>
+              <td>{w.helpedAny}</td>
             </tr>
           ))}
         </tbody>

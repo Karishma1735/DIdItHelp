@@ -49,7 +49,7 @@ BEGIN SELECT RAISE(ABORT, 'planned_day is immutable'); END;
 CREATE TABLE IF NOT EXISTS answers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   item_id INTEGER NOT NULL UNIQUE REFERENCES items(id),
-  value TEXT NOT NULL CHECK (value IN ('lot','little','none')),
+  value TEXT NOT NULL CHECK (value IN ('helped','none','lot','little')),
   comment TEXT NOT NULL DEFAULT '', answered_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS answer_tokens (
@@ -109,6 +109,25 @@ if (!inviteCols.includes('contact')) {
 // else's connections. People who already existed keep their old id (their database number) so nothing disconnects.
 if (!userCols.includes('vs_id')) db.exec('ALTER TABLE users ADD COLUMN vs_id TEXT');
 db.exec('UPDATE users SET vs_id = CAST(id AS TEXT) WHERE vs_id IS NULL');
+// The answers table once only allowed lot/little/none. Rebuild it (keeping every row) so "helped" is allowed too.
+// Old answers keep their values: a lot = 2 points, a little = 1; the new "helped" = 1.
+const answersDdl = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'answers'").get();
+if (answersDdl && !answersDdl.sql.includes("'helped'")) {
+  db.exec(`
+  BEGIN;
+  CREATE TABLE answers_new (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_id INTEGER NOT NULL UNIQUE REFERENCES items(id),
+    value TEXT NOT NULL CHECK (value IN ('helped','none','lot','little')),
+    comment TEXT NOT NULL DEFAULT '', answered_at TEXT NOT NULL
+  );
+  INSERT INTO answers_new (id, item_id, value, comment, answered_at) SELECT id, item_id, value, comment, answered_at FROM answers;
+  DROP TABLE answers;
+  ALTER TABLE answers_new RENAME TO answers;
+  COMMIT;
+  `);
+}
+
 const noticeCols = db.prepare('PRAGMA table_info(notices)').all().map((c) => c.name);
 if (noticeCols.length && !noticeCols.includes('done')) db.exec('ALTER TABLE notices ADD COLUMN done INTEGER NOT NULL DEFAULT 1'); // old rows were all sends that finished
 if (!userCols.includes('alert_contact')) db.exec("ALTER TABLE users ADD COLUMN alert_contact TEXT NOT NULL DEFAULT ''");

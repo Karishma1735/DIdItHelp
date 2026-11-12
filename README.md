@@ -10,7 +10,7 @@ A mentor or manager opens a read-only link and sees what you are doing today and
 
 1. **Plan**: what you will deliver, who it is for, how to reach them (Slack `@name` or email) and the planned day. For work with no clear receiver, tick "For: my mentor" and the question goes to your mentor.
 2. **Deliver**: mark it delivered with a proof link (PR, live flow, doc). No proof, no delivery.
-3. **Confirm**: the server posts to your viaSocket flow, which messages the receiver: "Hi Rahul, I delivered “Zoho plug”. Did it help you?" with three one-tap links. The receiver taps one.
+3. **Confirm**: the server posts to your viaSocket flow, which messages the receiver: "Hi Rahul, I delivered “Zoho plug”. Did it help you?" with two one-tap answers, **Helped** and **Didn't help**. By email they are real buttons; on Slack they are two links. The receiver taps one, no login needed.
 
 ### Who sends each message
 
@@ -70,7 +70,7 @@ Every page opens on **today**. A **Day | Week** switch, previous/next arrows and
 
 ### Scoring (for a day or a week, Monday to Sunday) — all in `server/lib/scoring.js`
 
-- **Impact** = sum of answers for items delivered in the period (that day or week): helped a lot = 2, a little = 1, didn't help = 0.
+- **Impact** = sum of answers for items delivered in the period (that day or week): **helped = 1 point**, didn't help = 0. (Answers recorded before the change keep their old value: a lot = 2, a little = 1. Old links in old emails still work.)
 - **Reliability** = items planned for the period and delivered by the end of that period ÷ items planned for the period (for a day: planned that day and delivered by the end of that day). Dropped items count as not delivered. Late deliveries count as delivered (and toward the impact of the day they were delivered), but not toward the reliability of the period they were planned for.
 - **Answer rate** = answered ÷ asked.
 
@@ -164,8 +164,7 @@ Create these in viaSocket (https://viasocket.com). Flow 1 is required; the other
      "what": "Zoho plug",
      "proofUrl": "https://github.com/acme/repo/pull/12",
      "answerUrl": "https://your-app.onrender.com/a/<token>",
-     "lotUrl": "https://your-app.onrender.com/a/<token>?v=lot",
-     "littleUrl": "https://your-app.onrender.com/a/<token>?v=little",
+     "helpedUrl": "https://your-app.onrender.com/a/<token>?v=helped",
      "noneUrl": "https://your-app.onrender.com/a/<token>?v=none",
      "isReminder": false
    }
@@ -179,8 +178,7 @@ Create these in viaSocket (https://viasocket.com). Flow 1 is required; the other
      Hi {{receiverName}}, I delivered “{{what}}”. Did it help you?
      Proof: {{proofUrl}}
 
-     Helped a lot: {{lotUrl}}
-     Helped a little: {{littleUrl}}
+     Helped: {{helpedUrl}}
      Didn't help: {{noneUrl}}
 
      Thanks, {{ownerName}}

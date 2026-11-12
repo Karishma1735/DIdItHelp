@@ -100,7 +100,7 @@ router.get('/employee_report', async (req, res) => {
       askedVia: i.askedVia,
       reminderSentAt: i.reminderSentAt,
       answeredAt: i.answeredAt,
-      answer: i.answer, // { value: lot | little | none, comment }
+      answer: i.answer, // { value: helped | none (older answers: lot | little), comment }
     })),
     history: d.history.map((w) => ({
       [d.period.kind === 'week' ? 'weekStart' : 'day']: w.start,
@@ -108,7 +108,7 @@ router.get('/employee_report', async (req, res) => {
       reliability: w.reliability,
       impact: w.impact,
       answerRate: w.answerRate,
-      helpedALot: w.lot,
+      saidItHelped: w.helpedAny,
     })),
   });
 });

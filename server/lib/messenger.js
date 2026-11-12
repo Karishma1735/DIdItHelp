@@ -13,10 +13,10 @@ const NOT_CONNECTED = new Set(['not_configured', 'not_connected', 'no_gmail', 'e
 const connectHint = (what) => `${what} Connect Slack or Gmail on the Integrations page so it goes from you.`;
 
 // One message to one contact (an email address or a Slack @name), from `senderId`'s own account.
-async function viaOwnAccount(senderId, contact, { subject, text }) {
+async function viaOwnAccount(senderId, contact, { subject, text, html }) {
   const channel = via.channelFor(contact);
   if (channel === 'email') {
-    const r = await apps.sendGmailAs(senderId, { to: contact.trim(), subject, body: text });
+    const r = await apps.sendGmailAs(senderId, { to: contact.trim(), subject, body: html || text });
     return { ...r, channel };
   }
   const found = await apps.findSlackUser(senderId, contact);
@@ -31,7 +31,8 @@ async function sendAsk(item, owner, isReminder = false) {
   const text = (isReminder ? 'Reminder: ' : '') + via.messageText(item, owner, links);
   const subject = `${isReminder ? 'Reminder: ' : ''}Did “${item.what}” help you?`;
 
-  const own = await viaOwnAccount(owner.id, item.contact, { subject, text });
+  // Email gets real buttons (HTML); Slack gets the same question with two links.
+  const own = await viaOwnAccount(owner.id, item.contact, { subject, text, html: via.emailHtml(item, owner, links, isReminder) });
   if (own.ok) return { ok: true, channel: own.channel };
   if (!NOT_CONNECTED.has(own.reason)) return { ok: false, channel: own.channel, error: own.error };
 

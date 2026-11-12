@@ -3,6 +3,7 @@ export const STATES = {
   late: { label: 'Late', cls: 'bg-red-700 text-white dark:bg-red-600' },
   unasked: { label: 'Delivered, not asked yet', cls: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200' },
   waiting: { label: 'Waiting for an answer', cls: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200' },
+  helped: { label: 'Helped', cls: 'bg-leaf-700 text-white dark:bg-leaf-600' },
   lot: { label: 'Helped a lot', cls: 'bg-leaf-700 text-white dark:bg-leaf-600' },
   little: { label: 'Helped a little', cls: 'bg-[#EDE8B8] text-[#5C5010] dark:bg-[#3A3510] dark:text-[#E4DC8A]' },
   none: { label: 'Didn’t help', cls: 'bg-ink-200 text-ink-700 dark:bg-ink-700 dark:text-ink-100' },

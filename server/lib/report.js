@@ -7,7 +7,7 @@ const { appUrl } = require('./viasocket');
 const { sendGmailAs } = require('./viasocketApps');
 
 const REPORT_FROM_HOUR = () => Number(process.env.REPORT_FROM_HOUR ?? 16);
-const ANSWER = { lot: 'helped a lot', little: 'helped a little', none: 'did not help' };
+const ANSWER = { helped: 'helped', lot: 'helped a lot', little: 'helped a little', none: 'did not help' };
 
 function buildReport(employee, justDelivered, now = new Date()) {
   const t = dates.localParts(now);

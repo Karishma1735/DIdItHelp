@@ -6,12 +6,13 @@
 // Task counts are used only as inputs to ratios and sentences; they are never a score.
 const { dayOf, addDays, weekStartOf, weekEndOf } = require('./dates');
 
-const POINTS = { lot: 2, little: 1, none: 0 };
+// Two answers now: helped (1 point) and didn't help (0). Older answers keep what they were worth: a lot = 2, a little = 1.
+const POINTS = { helped: 1, lot: 2, little: 1, none: 0 };
 
 const deliveredDay = (item) => (item.deliveredAt ? dayOf(new Date(item.deliveredAt)) : null);
 const inRange = (day, start, end) => !!day && day >= start && day <= end;
 
-// What the item is, right now: due | late | unasked | waiting | lot | little | none | dropped
+// What the item is, right now: due | late | unasked | waiting | helped | none | dropped (older answers: lot | little)
 function itemState(item, today) {
   if (item.status === 'dropped') return 'dropped';
   if (item.status === 'planned') return item.plannedDay < today ? 'late' : 'due';
@@ -47,8 +48,10 @@ function scorePeriod(items, start, end) {
     answerRate: asked.length ? Math.round((askedAnswered / asked.length) * 100) : null,
     asked: asked.length,
     askedAnswered,
+    helped: count('helped'),
     lot: count('lot'),
     little: count('little'),
+    helpedAny: count('helped') + count('lot') + count('little'), // everyone who said it helped, old or new answers
     none: count('none'),
     waiting: delivered.length - answered.length,
   };
@@ -84,8 +87,7 @@ function heroSentence(ownerName, s, today, { team = false } = {}) {
     : `${prefix} ${first} had nothing planned.`;
 
   const parts = [];
-  if (s.lot) parts.push(`${s.lot} ${s.lot === 1 ? 'person' : 'people'} said it helped a lot`);
-  if (s.little) parts.push(`${s.little} said a little`);
+  if (s.helpedAny) parts.push(`${s.helpedAny} ${s.helpedAny === 1 ? 'person' : 'people'} said it helped`);
   if (s.none) parts.push(`${s.none} said it didn't help`);
   if (s.waiting) parts.push(`${s.waiting} still to answer`);
   if (!parts.length) return head;
@@ -96,7 +98,7 @@ function heroSentence(ownerName, s, today, { team = false } = {}) {
 function explanations(kind = 'week') {
   const day = kind === 'day';
   return {
-    impact: `Helped a lot = 2, a little = 1, didn’t help = 0, for things delivered ${day ? 'that day' : 'this week'}.`,
+    impact: `Each “helped” = 1 point, “didn’t help” = 0 (older answers: a lot = 2, a little = 1), for things delivered ${day ? 'that day' : 'this week'}.`,
     reliability: day
       ? 'Planned for that day and delivered by the end of that day, out of everything planned for that day.'
       : 'Planned for this week and delivered by Sunday, out of everything planned for this week.',
@@ -121,8 +123,10 @@ function teamScore(scores, start, end = start) {
     impact: sum('impact'),
     reliability: planned ? Math.round((sum('deliveredOfPlanned') / planned) * 100) : null,
     answerRate: asked ? Math.round((sum('askedAnswered') / asked) * 100) : null,
+    helped: sum('helped'),
     lot: sum('lot'),
     little: sum('little'),
+    helpedAny: sum('helpedAny'),
     none: sum('none'),
     waiting: sum('waiting'),
   };

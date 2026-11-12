@@ -24,7 +24,7 @@ router.get('/', (req, res) => {
         env: 'VIASOCKET_ASK_WEBHOOK_URL',
         configured: set('VIASOCKET_ASK_WEBHOOK_URL'),
         purpose: 'Backup for the “Did it help?” ask. The app sends it from the person’s own connected Slack or Gmail. This shared flow is used only when the sender has neither connected.',
-        fields: ['channel', 'to', 'receiverName', 'ownerName', 'what', 'proofUrl', 'answerUrl', 'lotUrl', 'littleUrl', 'noneUrl', 'isReminder'],
+        fields: ['channel', 'to', 'receiverName', 'ownerName', 'what', 'proofUrl', 'answerUrl', 'helpedUrl', 'noneUrl', 'isReminder'],
       },
       {
         id: 'reminder',

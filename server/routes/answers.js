@@ -44,7 +44,8 @@ router.post('/:token', (req, res) => {
 
   const existing = store.answers.get(item.id);
   const value = req.body.value === undefined ? existing && existing.value : req.body.value;
-  if (!['lot', 'little', 'none'].includes(value)) {
+  // Two answers now. 'lot' and 'little' are accepted only so links in older emails keep working.
+  if (!['helped', 'none', 'lot', 'little'].includes(value)) {
     return res.status(400).json({ error: 'Pick one of the three answers.' });
   }
   const comment = typeof req.body.comment === 'string' ? req.body.comment.trim().slice(0, 1000) : undefined;

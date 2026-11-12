@@ -15,8 +15,7 @@ async function createAnswerLinks(itemId) {
   const answerUrl = `${appUrl()}/a/${raw}`;
   return {
     answerUrl,
-    lotUrl: `${answerUrl}?v=lot`,
-    littleUrl: `${answerUrl}?v=little`,
+    helpedUrl: `${answerUrl}?v=helped`,
     noneUrl: `${answerUrl}?v=none`,
   };
 }
@@ -40,12 +39,27 @@ function messageText(item, owner, links) {
     `Hi ${item.forWhom}, I delivered “${item.what}”. Did it help you?`,
     `Proof: ${item.proofUrl}`,
     '',
-    `Helped a lot: ${links.lotUrl}`,
-    `Helped a little: ${links.littleUrl}`,
+    `Helped: ${links.helpedUrl}`,
     `Didn't help: ${links.noneUrl}`,
     '',
     `Thanks, ${owner.name}`,
   ].join('\n');
+}
+
+const esc = (v) =>
+  String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+// The ask as an HTML email: two big buttons, Helped and Didn't help. Everything that came from a person is escaped.
+function emailHtml(item, owner, links, isReminder = false) {
+  const button = (href, label, bg) =>
+    `<a href="${esc(href)}" style="display:inline-block;padding:14px 30px;margin:6px 10px 6px 0;border-radius:8px;background:${bg};color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;text-decoration:none">${esc(label)}</a>`;
+  return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;color:#14202E;line-height:1.55;font-size:15px">
+${isReminder ? '<p style="margin:0 0 10px;color:#5F7285;font-size:13px">Reminder</p>' : ''}<p style="margin:0 0 12px">Hi ${esc(item.forWhom)},</p>
+<p style="margin:0 0 12px">${esc(owner.name)} delivered <strong>“${esc(item.what)}”</strong>. Did it help you?</p>
+<p style="margin:0 0 18px"><a href="${esc(item.proofUrl)}" style="color:#2B4257">See what was delivered</a></p>
+<p style="margin:0 0 8px">${button(links.helpedUrl, 'Helped', '#1F6B4A')}${button(links.noneUrl, "Didn't help", '#5F7285')}</p>
+<p style="margin:14px 0 0;color:#8396A8;font-size:12px">One tap is enough. No login needed.</p>
+</div>`;
 }
 
 // Returns { ok, channel, error }. ok is true only for a 2xx response.
@@ -102,4 +116,4 @@ async function sendReminderViaWebhook(user, extra) {
   );
 }
 
-module.exports = { appUrl, channelFor, createAnswerLinks, messageText, postToViaSocket, sendAskViaWebhook, sendInviteViaWebhook, sendReminderViaWebhook };
+module.exports = { appUrl, channelFor, createAnswerLinks, messageText, emailHtml, postToViaSocket, sendAskViaWebhook, sendInviteViaWebhook, sendReminderViaWebhook };

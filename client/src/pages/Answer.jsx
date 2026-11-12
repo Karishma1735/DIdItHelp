@@ -4,11 +4,12 @@ import Brand from '../components/Brand.jsx';
 import api, { errorMessage } from '../api';
 
 const OPTIONS = [
-  { value: 'lot', label: 'Helped a lot', cls: 'bg-leaf-700 text-white hover:bg-leaf-800' },
-  { value: 'little', label: 'Helped a little', cls: 'bg-[#8A7A18] text-white hover:bg-[#6F6212]' },
+  { value: 'helped', label: 'Helped', cls: 'bg-leaf-700 text-white hover:bg-leaf-800' },
   { value: 'none', label: 'Didn’t help', cls: 'bg-ink-600 text-white hover:bg-ink-700' },
 ];
-const LABEL = Object.fromEntries(OPTIONS.map((o) => [o.value, o.label]));
+// Older answers (and links in older emails) used lot / little; they still read correctly.
+const LABEL = { ...Object.fromEntries(OPTIONS.map((o) => [o.value, o.label])), lot: 'Helped a lot', little: 'Helped a little' };
+const VALID = ['helped', 'none', 'lot', 'little'];
 
 export default function Answer() {
   const { token } = useParams();
@@ -48,7 +49,7 @@ export default function Answer() {
         return setFatal(errorMessage(err, 'This link is not valid any more.'));
       }
       const v = params.get('v');
-      if (['lot', 'little', 'none'].includes(v)) {
+      if (VALID.includes(v)) {
         // One tap from the message records the answer straight away.
         if (await send({ value: v })) setSaved(true);
         // Drop ?v from the URL so a reload can't overwrite a later change.

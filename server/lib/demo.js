@@ -7,16 +7,16 @@ const dates = require('./dates');
 
 // [days from today, what, for whom, outcome, comment]
 const PLAN = [
-  [-9, 'Onboarding checklist', 'Priya', 'lot', ''],
-  [-8, 'Release notes template', 'Arjun', 'little', ''],
-  [-6, 'Staging environment fix', 'Neha', 'lot', 'Unblocked our whole QA round.'],
+  [-9, 'Onboarding checklist', 'Priya', 'helped', ''],
+  [-8, 'Release notes template', 'Arjun', 'helped', ''],
+  [-6, 'Staging environment fix', 'Neha', 'helped', 'Unblocked our whole QA round.'],
   [-5, 'API docs refresh', 'Priya', 'none', 'Useful, but I needed the auth section.'],
   [-4, 'Old weekly report', 'Arjun', 'dropped', ''],
-  [-3, 'Zoho plug', 'Rahul', 'lot', 'Saved me an afternoon.'],
-  [-2, 'Bug triage sheet', 'Arjun', 'little', ''],
+  [-3, 'Zoho plug', 'Rahul', 'helped', 'Saved me an afternoon.'],
+  [-2, 'Bug triage sheet', 'Arjun', 'helped', ''],
   [-1, 'Slack alert flow', 'Neha', 'waiting', ''],
   [-1, 'Refactor billing module', 'Priya', 'late', ''],
-  [0, 'Sprint demo deck', 'Neha', 'lot', 'Exactly what I needed for the demo.'],
+  [0, 'Sprint demo deck', 'Neha', 'helped', 'Exactly what I needed for the demo.'],
   [0, 'Customer FAQ page', 'Priya', 'deliveredToday', ''],
   [0, 'Weekly metrics dashboard', 'Rahul', 'due', ''],
 ];
@@ -50,7 +50,7 @@ function seedDemo(manager) {
         askedVia: 'slack',
         reminderSentAt: askedAt, // keeps the sample from ever triggering a real reminder
       });
-      if (['lot', 'little', 'none'].includes(outcome)) {
+      if (['helped', 'none'].includes(outcome)) {
         store.answers.upsert(item.id, outcome, comment);
         store.items.update(item.id, { answeredAt: `${day}T15:00:00.000Z` });
       }
