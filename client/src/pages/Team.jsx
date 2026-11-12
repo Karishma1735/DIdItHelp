@@ -10,7 +10,7 @@ import Numbers from '../components/Numbers.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import InvitePanel from '../components/InvitePanel.jsx';
 import AskAI from '../components/AskAI.jsx';
-import { formatDay } from '../dates.js';
+import { formatDay, fmtMinutes } from '../dates.js';
 
 const pct = (v) => (v === null || v === undefined ? '—' : `${v}%`);
 
@@ -43,6 +43,26 @@ function Mini({ label, value }) {
   );
 }
 
+function HoursLine({ hours }) {
+  if (!hours) return null;
+  const tone = hours.status === 'under' || hours.status === 'over' ? 'text-amber-800 dark:text-amber-300' : hours.status === 'full' ? 'text-leaf-700 dark:text-leaf-300' : 'text-amber-800 dark:text-amber-300';
+  const text =
+    hours.status === 'empty' ? `No hours planned yet (of ${fmtMinutes(hours.capacity)})`
+    : hours.status === 'under' ? `${fmtMinutes(hours.planned)} planned of ${fmtMinutes(hours.capacity)} · ${fmtMinutes(hours.unplanned)} unplanned`
+    : hours.status === 'over' ? `${fmtMinutes(hours.planned)} planned · ${fmtMinutes(hours.over)} over ${fmtMinutes(hours.capacity)}`
+    : `${fmtMinutes(hours.capacity)} planned`;
+  const scale = Math.max(hours.capacity, hours.planned) || 1;
+  return (
+    <div className="space-y-1">
+      <div role="img" aria-label={text} className="flex h-2 overflow-hidden rounded-full bg-mist-200 dark:bg-ink-800">
+        <div className="bg-steel-600 dark:bg-steel-400" style={{ width: `${(hours.itemMinutes / scale) * 100}%` }} />
+        <div className="bg-steel-300 dark:bg-steel-700" style={{ width: `${(hours.blockMinutes / scale) * 100}%` }} />
+      </div>
+      <p className={`text-xs font-medium ${tone}`}>{text}{hours.deliveredMinutes > 0 ? ` · ${fmtMinutes(hours.deliveredMinutes)} delivered` : ''}</p>
+    </div>
+  );
+}
+
 function MemberCard({ m, query }) {
   const quiet = !m.today.planned.length && !m.today.deliveredToday.length && !m.today.late.length;
   return (
@@ -68,6 +88,7 @@ function MemberCard({ m, query }) {
           <Mini label="Reliability" value={pct(m.numbers.reliability)} />
           <Mini label="Answers" value={pct(m.numbers.answerRate)} />
         </div>
+        <HoursLine hours={m.hours} />
         <div className="space-y-2 border-t border-mist-300 pt-3 dark:border-ink-800">
           <p className="text-sm font-semibold">Today</p>
           {quiet && <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Hasn’t planned today yet.</p>}

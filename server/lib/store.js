@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS items (
   reminder_sent_at TEXT, answered_at TEXT,
   deadline_time TEXT NOT NULL DEFAULT '17:00',
   proof_file_name TEXT, proof_file_id TEXT, proof_file_size INTEGER, proof_storage TEXT,
+  estimate_minutes INTEGER, start_time TEXT, estimate_assumed INTEGER NOT NULL DEFAULT 0,
   deadline_reminder_sent_at TEXT,
   report_sent_at TEXT, report_error TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL, updated_at TEXT NOT NULL
@@ -67,6 +68,15 @@ CREATE TABLE IF NOT EXISTS invites (
   used_by INTEGER REFERENCES users(id), used_at TEXT, revoked_at TEXT,
   expires_at TEXT NOT NULL, created_at TEXT NOT NULL
 );
+-- Time that is part of the 8-hour day but has no receiver (meetings, learning, support, admin). Never scored.
+CREATE TABLE IF NOT EXISTS blocks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  day TEXT NOT NULL, title TEXT NOT NULL, minutes INTEGER NOT NULL,
+  start_time TEXT, kind TEXT NOT NULL DEFAULT 'other',
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS blocks_user_day ON blocks(user_id, day);
 CREATE TABLE IF NOT EXISTS notices (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id),
@@ -145,6 +155,18 @@ if (!itemCols.includes('proof_file_name')) {
   db.exec('ALTER TABLE items ADD COLUMN proof_file_size INTEGER');
   db.exec('ALTER TABLE items ADD COLUMN proof_storage TEXT');
 }
+if (!itemCols.includes('estimate_minutes')) {
+  db.exec('ALTER TABLE items ADD COLUMN estimate_minutes INTEGER');
+  db.exec('ALTER TABLE items ADD COLUMN start_time TEXT');
+  db.exec('ALTER TABLE items ADD COLUMN estimate_assumed INTEGER NOT NULL DEFAULT 0');
+}
+// The estimate and the slot are fixed when planned, like the deadline: otherwise hours could be rewritten after the fact.
+db.exec(`
+DROP TRIGGER IF EXISTS items_estimate_immutable;
+CREATE TRIGGER items_estimate_immutable
+BEFORE UPDATE OF estimate_minutes, start_time ON items
+BEGIN SELECT RAISE(ABORT, 'estimate and start time are immutable'); END;
+`);
 // The deadline time, like the planned day, can never be edited.
 db.exec(`
 DROP TRIGGER IF EXISTS items_deadline_immutable;
@@ -176,6 +198,7 @@ const itemOut = (r) =>
     isForMentor: !!r.is_for_mentor, plannedDay: r.planned_day, status: r.status, proofUrl: r.proof_url,
     deliveredAt: r.delivered_at, droppedAt: r.dropped_at, askedAt: r.asked_at, askedVia: r.asked_via,
     askError: r.ask_error, reminderSentAt: r.reminder_sent_at, answeredAt: r.answered_at,
+    estimateMinutes: r.estimate_minutes, startTime: r.start_time, estimateAssumed: !!r.estimate_assumed,
     proofFileName: r.proof_file_name, proofFileId: r.proof_file_id, proofFileSize: r.proof_file_size, proofStorage: r.proof_storage,
     deadlineTime: r.deadline_time, deadlineReminderSentAt: r.deadline_reminder_sent_at,
     reportSentAt: r.report_sent_at, reportError: r.report_error,
@@ -226,11 +249,11 @@ const items = {
     itemOut(db.prepare('SELECT * FROM items WHERE id = ? AND owner_id = ?').get(Number(id), Number(ownerId))),
   listByOwner: (ownerId) =>
     db.prepare('SELECT * FROM items WHERE owner_id = ? ORDER BY planned_day, created_at, id').all(Number(ownerId)).map(itemOut),
-  create: ({ owner, what, forWhom, contact, isForMentor, plannedDay, deadlineTime = '17:00' }) => {
+  create: ({ owner, what, forWhom, contact, isForMentor, plannedDay, deadlineTime = '17:00', estimateMinutes = null, startTime = null, estimateAssumed = false }) => {
     const t = now();
     const r = db.prepare(
-      'INSERT INTO items (owner_id, what, for_whom, contact, is_for_mentor, planned_day, deadline_time, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)'
-    ).run(Number(owner), what, forWhom, contact, isForMentor ? 1 : 0, plannedDay, deadlineTime, t, t);
+      'INSERT INTO items (owner_id, what, for_whom, contact, is_for_mentor, planned_day, deadline_time, estimate_minutes, start_time, estimate_assumed, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
+    ).run(Number(owner), what, forWhom, contact, isForMentor ? 1 : 0, plannedDay, deadlineTime, estimateMinutes, startTime, estimateAssumed ? 1 : 0, t, t);
     return items.get(r.lastInsertRowid);
   },
   update: (id, fields) => { update('items', ITEM_COLS, id, fields, true); return items.get(id); },
@@ -388,6 +411,18 @@ const vsConn = {
       .run(value, label, now(), Number(userId), 'slack'),
 };
 
+const blockOut = (r) => r && { id: sid(r.id), userId: sid(r.user_id), day: r.day, title: r.title, minutes: r.minutes, startTime: r.start_time, kind: r.kind };
+const blocks = {
+  create: (userId, { day, title, minutes, startTime = null, kind = 'other' }) => {
+    const r = db.prepare('INSERT INTO blocks (user_id, day, title, minutes, start_time, kind, created_at) VALUES (?,?,?,?,?,?,?)')
+      .run(Number(userId), day, title, minutes, startTime, kind, now());
+    return blockOut(db.prepare('SELECT * FROM blocks WHERE id = ?').get(r.lastInsertRowid));
+  },
+  listByDay: (userId, day) =>
+    db.prepare('SELECT * FROM blocks WHERE user_id = ? AND day = ? ORDER BY COALESCE(start_time, \'99:99\'), id').all(Number(userId), day).map(blockOut),
+  remove: (id, userId) => db.prepare('DELETE FROM blocks WHERE id = ? AND user_id = ?').run(Number(id), Number(userId)).changes === 1,
+};
+
 // "Already sent today" records, so a message is never sent twice for the same person, kind and day.
 const notices = {
   // Claim BEFORE sending. A claim that was never confirmed (a run that died mid-send) can be retaken after 10 minutes.
@@ -409,4 +444,4 @@ users.withoutPlanFor = (day) =>
      ORDER BY u.id`
   ).all(day).map(userOut);
 
-module.exports = { db, users, items, answers, tokens, share, invites, tx, removeDemoUser, vsConn, notices };
+module.exports = { db, users, items, answers, tokens, share, invites, tx, removeDemoUser, vsConn, notices, blocks };

@@ -2,6 +2,7 @@
 const store = require('./store');
 const dates = require('./dates');
 const scoring = require('./scoring');
+const hours = require('./hours');
 
 function loadItems(ownerId) {
   const byItem = new Map(store.answers.listByOwner(ownerId).map((a) => [a.itemId, a]));
@@ -18,6 +19,10 @@ function serializeItem(item, today, { forManager = false } = {}) {
     isForMentor: item.isForMentor,
     plannedDay: item.plannedDay,
     deadlineTime: item.deadlineTime,
+    estimateMinutes: item.estimateMinutes,
+    estimateAssumed: item.estimateAssumed,
+    startTime: item.startTime,
+    endTime: item.startTime && item.estimateMinutes ? hours.toHm(Math.min(1439, hours.toMin(item.startTime) + item.estimateMinutes)) : null,
     pastDeadline: item.status === 'planned' && (item.plannedDay < today || (item.plannedDay === today && dates.localParts().hm >= item.deadlineTime)),
     reportSentAt: item.reportSentAt,
     reportError: forManager ? undefined : item.reportError || undefined,
@@ -71,6 +76,10 @@ async function buildOverview(user, params, opts = {}) {
       deliveredToday: all.filter((i) => i.status === 'delivered' && scoring.deliveredDay(i) === today).map(ser),
       late: all.filter((i) => i.status === 'planned' && i.plannedDay < today).map(ser),
     },
+    // The 8-hour day is shown for a single day. Hours are coverage, never a score.
+    hours: period.kind === 'day' ? hours.dayHours(all, store.blocks.listByDay(user.id, period.start), period.start) : null,
+    timeline: period.kind === 'day' ? hours.timeline(all, store.blocks.listByDay(user.id, period.start), period.start) : [],
+    blocks: period.kind === 'day' ? store.blocks.listByDay(user.id, period.start) : [],
     hero: scoring.heroSentence(user.name, score, today),
     numbers: {
       impact: score.impact,
@@ -110,6 +119,7 @@ function buildTeamSummary(manager, params) {
           late: all.filter((i) => i.status === 'planned' && i.plannedDay < today).map(ser).map(lite),
         },
         waitingForAnswer: score.waiting > 0,
+        hours: period.kind === 'day' ? hours.dayHours(all, store.blocks.listByDay(member.id, period.start), period.start) : null,
       },
     };
   });

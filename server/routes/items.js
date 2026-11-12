@@ -52,6 +52,8 @@ router.post('/items', async (req, res) => {
   const what = str(req.body.what, 300);
   const plannedDay = req.body.plannedDay;
   const deadlineTime = req.body.deadlineTime === undefined ? '17:00' : req.body.deadlineTime;
+  const estimateMinutes = req.body.estimateMinutes === undefined || req.body.estimateMinutes === null || req.body.estimateMinutes === '' ? null : Number(req.body.estimateMinutes);
+  const startTime = req.body.startTime ? req.body.startTime : null;
   const isForMentor = req.body.isForMentor === true;
   let forWhom = str(req.body.forWhom, 120);
   let contact = str(req.body.contact, 200);
@@ -78,7 +80,16 @@ router.post('/items', async (req, res) => {
     return res.status(400).json({ error: 'That deadline time has already passed today. Pick a later time, or plan it for another day.' });
   }
 
-  await reply(res, store.items.create({ owner: user.id, what, forWhom, contact, isForMentor, plannedDay, deadlineTime }), 201);
+  if (estimateMinutes !== null && (!Number.isInteger(estimateMinutes) || estimateMinutes < 5 || estimateMinutes > 720)) {
+    return res.status(400).json({ error: 'The time needed must be between 5 minutes and 12 hours.' });
+  }
+  if (startTime !== null && !dates.isTime(startTime)) return res.status(400).json({ error: 'Pick a start time, like 10:00.' });
+  if (startTime !== null && estimateMinutes === null) return res.status(400).json({ error: 'Add the time needed to give it a start time.' });
+
+  await reply(res, store.items.create({
+    owner: user.id, what, forWhom, contact, isForMentor, plannedDay, deadlineTime,
+    estimateMinutes, startTime, estimateAssumed: req.body.estimateAssumed === true,
+  }), 201);
 });
 
 // No PATCH route exists for items on purpose: the planned day can't be edited

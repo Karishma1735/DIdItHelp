@@ -4,6 +4,7 @@ import Numbers from './Numbers.jsx';
 import ImpactChart from './ImpactChart.jsx';
 import ItemCard from './ItemCard.jsx';
 import HistoryTable from './HistoryTable.jsx';
+import DayHours from './DayHours.jsx';
 import { formatDay, formatRange } from '../dates.js';
 
 export const periodLabel = (p) =>
@@ -12,7 +13,7 @@ export const periodLabel = (p) =>
     : `${p.isCurrent ? 'This week' : 'Week of'} · ${formatRange(p.start, p.end)}`;
 
 // Shared by the owner desk, a manager's view of a report and the share-link page.
-// `children` (the plan form) is rendered between the numbers and the item list.
+// `children` (the planner and the plan form) sit right under the numbers and the 8-hour card, above the chart and the item list.
 export default function PeriodView({ data, readOnly, onItemChange, onOpenDate, children }) {
   const { period } = data;
   const heading = period.kind === 'day' ? (period.isCurrent ? 'Items today' : `Items on ${formatDay(period.start)}`) : period.isCurrent ? 'Items this week' : 'Items that week';
@@ -21,8 +22,9 @@ export default function PeriodView({ data, readOnly, onItemChange, onOpenDate, c
       <TodaySection today={data.today} section={data.todaySection} />
       <Hero text={data.hero} label={periodLabel(period)} />
       <Numbers numbers={data.numbers} />
-      <ImpactChart history={data.history} kind={period.kind} activeStart={period.start} onOpen={onOpenDate} />
+      <DayHours data={data} readOnly={readOnly} onChange={onItemChange} />
       {children}
+      <ImpactChart history={data.history} kind={period.kind} activeStart={period.start} onOpen={onOpenDate} />
       <section>
         <h2 className="mb-3 text-xl font-semibold">{heading}</h2>
         {data.items.length === 0 ? (

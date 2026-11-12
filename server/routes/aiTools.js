@@ -34,6 +34,8 @@ function periodParams(raw) {
   return { view: 'day', date: dates.isDay(w) ? w : today };
 }
 
+const hoursOut = (h) => h && { plannedMinutes: h.planned, capacityMinutes: h.capacity, unplannedMinutes: h.unplanned, overMinutes: h.over, deliveredMinutes: h.deliveredMinutes, status: h.status };
+
 const brief = (i) => ({ what: i.what, state: i.state, plannedDay: i.plannedDay, deadline: i.deadlineTime, pastDeadline: !!i.pastDeadline });
 
 router.get('/list_team', (req, res) => {
@@ -56,6 +58,7 @@ router.get('/team_summary', (req, res) => {
       summary: m.hero,
       numbers: m.numbers,
       waitingForAnswer: m.waitingForAnswer,
+      hours: hoursOut(m.hours), // coverage of the 8-hour day: a check, never a score
       today: { planned: m.today.planned.map(brief), deliveredToday: m.today.deliveredToday.map(brief), late: m.today.late.map(brief) },
     })),
   });
@@ -78,6 +81,7 @@ router.get('/employee_report', async (req, res) => {
     employee: { name: member.name, role: member.role },
     today: d.today,
     period: d.period,
+    hours: hoursOut(d.hours), // coverage of the 8-hour day for this day: a check, never a score
     summary: d.hero,
     numbers: { impact: d.numbers.impact, reliability: d.numbers.reliability, answerRate: d.numbers.answerRate },
     todaySection: {
@@ -91,6 +95,8 @@ router.get('/employee_report', async (req, res) => {
       state: i.state,
       plannedDay: i.plannedDay,
       deadline: i.deadlineTime,
+      estimateMinutes: i.estimateMinutes,
+      slot: i.startTime && i.endTime ? `${i.startTime}-${i.endTime}` : null,
       pastDeadline: i.pastDeadline,
       reportEmailedToManagerAt: i.reportSentAt,
       deliveredAt: i.deliveredAt,

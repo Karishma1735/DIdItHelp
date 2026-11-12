@@ -3,6 +3,7 @@
 const store = require('./store');
 const dates = require('./dates');
 const scoring = require('./scoring');
+const hours = require('./hours');
 const { appUrl } = require('./viasocket');
 const { sendGmailAs } = require('./viasocketApps');
 
@@ -23,6 +24,7 @@ function buildReport(employee, justDelivered, now = new Date()) {
   const open = all.filter((i) => i.status === 'planned' && i.plannedDay === t.day);
   const late = all.filter((i) => i.status === 'planned' && i.plannedDay < t.day);
   const score = scoring.scoreWeek(all, dates.weekStartOf(t.day));
+  const hrs = hours.dayHours(all, store.blocks.listByDay(employee.id, t.day), t.day);
   const list = (items, fn) => (items.length ? items.map(fn).join('\n') : '- none');
 
   const body = [
@@ -40,6 +42,11 @@ function buildReport(employee, justDelivered, now = new Date()) {
     'Late from earlier days:',
     list(late, (i) => `- ${i.what} (for ${i.forWhom}) - planned ${i.plannedDay}`),
     '',
+    hrs.planned
+      ? `Hours today: ${hours.fmt(hrs.planned)} planned of ${hours.fmt(hrs.capacity)}` +
+        (hrs.unplanned ? ` (${hours.fmt(hrs.unplanned)} not planned)` : hrs.over ? ` (${hours.fmt(hrs.over)} over)` : '') +
+        `, ${hours.fmt(hrs.deliveredMinutes)} delivered so far.`
+      : 'Hours today: nothing planned with a time.',
     scoring.heroSentence(employee.name, score, t.day),
     '',
     `Open the dashboard: ${appUrl()}/team`,

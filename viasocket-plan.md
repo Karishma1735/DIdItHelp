@@ -158,7 +158,7 @@ Tested: every decision (own account first, backup flow, clear errors, no silent 
 
 # Plan: AI day planner with hours and a timeline (feature `ai`)
 
-Status: proposed, waiting for a yes. Owner's choices (asked): every day is 8 hours; under 8h is a warning, not a rule; meetings, learning and support count towards the 8 hours; managers see hours. Wanted: the person types their tasks in the morning, the AI separates them, adds a timeline and, as work is finished, helps mark it complete.
+Status: confirmed by the owner ("yes") and built, not yet deployed. Owner's choices (asked): every day is 8 hours; under 8h is a warning, not a rule; meetings, learning and support count towards the 8 hours; managers see hours. Wanted: the person types their tasks in the morning, the AI separates them, adds a timeline and, as work is finished, helps mark it complete.
 
 ## What the person will see
 

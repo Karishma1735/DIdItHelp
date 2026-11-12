@@ -29,6 +29,17 @@ A Slack @name is matched to exactly one person in the sender's own Slack. If nob
 
 The morning prompt and deadline reminder go from each person's own accounts (see above); the viaSocket flow at `VIASOCKET_REMINDER_WEBHOOK_URL` is only the backup for people with nothing connected. Create it like the other flows: a **Webhook** trigger, a Condition on `channel`, then Slack **Send message** or Gmail **Send email**, using `kind` to choose the wording (`morning_plan`: "What will you deliver today? {dashboardUrl}"; `deadline`: "Your deadline for {what} ({deadline}) has passed. {dashboardUrl}"). Payload: `{ kind, channel, to, receiverName, dashboardUrl, day?, what?, forWhom?, deadline?, plannedDay? }`. On Embarko, `embarko.json` runs `/tasks/tick` every 5 minutes; elsewhere call `GET /api/jobs/tick?key=<DIGEST_KEY>` on a 5-minute schedule.
 
+### The 8-hour day and the AI day planner
+
+Every day is **8 hours for everyone** (`WORKDAY_MINUTES`, default 480). Hours are a **coverage check**, never a score: they do not enter Impact, Reliability or Answer rate. A day with less or more than 8 hours planned only shows an amber **warning**, on the person's desk (a bar, "5h 30m planned of 8h. 2h 30m is still unplanned"), on their manager's Team card and report page, in the evening report email ("Hours today: 6h planned of 8h…") and in what the manager's AI assistant can see.
+
+- **Tasks** have a receiver and are scored as before. They now also carry a **time needed**, a **start time** and (as the deadline) the **end of their slot**. The time and the start time are fixed once planned, like the day and the deadline (a database trigger refuses any change).
+- **Blocks** are meetings, learning, support, admin and other time with no receiver. They count toward the 8 hours, show on the timeline and are **never scored**. Add and remove them on the day card (today or later).
+- **Plan my day (AI):** in the morning the person types their plan in plain words ("CRM plugs for Rahul 2h, docs for Priya 1h, standup at 10:30 for 30 min, learn Rust 1.5h, no receiver"). The AI separates tasks from blocks, reads the durations, and the server lays them out on a **timeline** from 09:00 (or from now, if later): lunch 13:00–14:00 is left free, a fixed clock time like a standup is honoured, nothing overlaps what is already on the day, and anything that does not fit before midnight gets no slot instead of a wrong one. The person sees an **editable draft** (every field, the start times, the receiver, a live hours total, overlap warnings and the AI's questions) and **nothing is created until they click "Add to my plan"**. Each row is then created through the normal validated routes.
+- **Finished something?** The person tells the AI "CRM plugs done, proof https://…". The AI only **proposes** matches against that person's own open items and shows a "Mark delivered" card for each. A **task is never marked complete without a proof link or an uploaded file**: with no link the card asks for one, and the person confirms with a click. The AI never creates, changes, delivers or sends anything itself.
+
+How it is kept safe (`server/lib/planner.js`): the person's text goes to the AI as the *message*, never inside the instructions, and is cut at 4,000 characters; the AI has no tools; its answer must match a JSON schema and is then validated again (at most 12 tasks and 12 blocks, lengths cut, minutes 5–480 or an assumed hour when none is given, contacts must be an email or a Slack @name or are dropped with a question, an id that is not that person's open item is dropped, proof links must be http or https). A hung or failing AI gives a plain message and the manual form still works. Each request is a fresh AI thread and the person's words are never written to the logs. It uses viaSocket's built-in AI (`user.ai.send`), so there is no model key to manage.
+
 ### Proof: a link or an uploaded file
 
 When marking something delivered, the proof is **a link** (PR, live flow, doc) **or an uploaded file**. Allowed: png, jpg, jpeg, gif, webp, pdf, txt, md, csv, zip, mp4, webm, up to 20 MB (the app checks that the file really is what its extension says; html, svg, scripts and executables are refused; for Word or Excel use a zip or a link). The file is stored once and the receiver, the manager and the AI all just see its link:
@@ -119,6 +130,8 @@ For local use, `APP_URL=http://localhost:5173` makes the links in messages open 
 | `VIASOCKET_ASK_WEBHOOK_URL` | Webhook URL of the ask flow. Used server-side only |
 | `DIGEST_KEY` | Secret for `/api/today`, `/api/digest` and `/api/jobs/reminders` (`?key=...`) |
 | `APP_TIMEZONE` | Optional. Decides what "today" and the Monday–Sunday week mean (default `UTC`) |
+| `WORKDAY_MINUTES` | Optional. Length of the working day in minutes (default `480`, which is 8 hours) |
+| `VIASOCKET_AI_TIMEOUT_MS` | Optional. How long the day planner waits for the AI (default `45000`) |
 
 ## Deploy on Embarko (one service)
 
@@ -221,11 +234,11 @@ The same flow is used for the one reminder after 2 days with no answer (`"isRemi
 2. Add the same GET step on `/api/today?key=<DIGEST_KEY>`.
 3. Add **Slack → Send message** to yourself with `{{eveningMessage}}`. It lists the items not yet delivered and the delivered items not yet asked. (The raw lists are also there as `notDelivered` and `notYetAsked`.)
 
-### 4. Friday 17:00 — weekly summary to your mentor
+### 4. Friday 17:00 — weekly summary to your manager
 
 1. Trigger **Schedule**, `0 17 * * 5`.
 2. Add a GET step on `https://<APP_URL>/api/digest?key=<DIGEST_KEY>`.
-3. Add **Slack → Send message** (to the mentor, or use `mentor.contact`) or **Gmail → Send email** with `{{summaryText}}`. It holds the hero sentence, Impact, Reliability, Answer rate and the items still waiting for an answer.
+3. Add **Slack → Send message** (to the manager, or use `mentor.contact`, which is the field name in the payload) or **Gmail → Send email** with `{{summaryText}}`. It holds the hero sentence, Impact, Reliability, Answer rate and the items still waiting for an answer.
 
 ### 5. Optional backup — daily reminder check
 
@@ -237,7 +250,9 @@ If your host sleeps, add a flow on a daily schedule that calls `GET https://<APP
 | --- | --- | --- |
 | `POST /api/auth/register`, `/login` | rate-limited | Owner account (first account only) and sign-in |
 | `GET /api/overview?view=day\|week&date=YYYY-MM-DD` | owner | Dashboard data for a day (default) or a week |
-| `POST /api/items` | owner | Plan an item |
+| `POST /api/items` | owner | Plan an item (optionally with `estimateMinutes` and `startTime`) |
+| `POST /api/blocks`, `DELETE /api/blocks/:id` | owner | Add or remove meeting, learning or support time on a day (never scored) |
+| `POST /api/planner/draft`, `/api/planner/complete` | owner, rate-limited | The AI day planner: draft a day from text, and match finished work to open items. Neither creates anything |
 | `POST /api/items/:id/deliver-file?name=` | owner | Deliver with an uploaded file as proof (raw file as the body) |
 | `POST /api/items/:id/deliver` `/ask` `/drop` `/message` | owner | Deliver with proof, ask again, drop, get the copyable message |
 | `GET/POST /api/answer/:token` | token, rate-limited | Answer page data and answers |
@@ -260,6 +275,8 @@ client/   React + Vite + Tailwind (JavaScript)
 server/   Express + SQLite (node:sqlite); dependencies live in the root package.json
   lib/store.js     database schema and queries
   lib/scoring.js   all scoring logic
+  lib/hours.js     the 8-hour day: hours picture, timeline, slot layout (never part of a score)
+  lib/planner.js   the AI day planner: draft + match finished work, with validation
   lib/viasocket.js the only code that calls viaSocket
   jobs/reminders.js reminder logic (run daily by the host's scheduler)
 ```

@@ -64,7 +64,7 @@ async function sendReminder(user, { kind, day, what, forWhom, deadline, plannedD
   const text =
     kind === 'deadline'
       ? `Hi ${first}, your deadline for “${what}” (${deadline}) has passed and it isn't delivered yet. Open Did it help?: ${dash}`
-      : `Good morning ${first}. What will you deliver today? Plan it here: ${dash}`;
+      : `Good morning ${first}. What will you deliver today? Tell the planner what you will do and fill your 8 hours: ${dash}`;
   const subject = kind === 'deadline' ? `Deadline passed: ${what}` : 'What will you deliver today?';
 
   const tries = [];
