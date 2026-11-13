@@ -2,6 +2,16 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 require('dotenv').config();
 
+// A crash must leave a note before the process dies, so the next start can wake someone (see lib/crashNote.js).
+// Registered first, with nothing else loaded: it works even when the database is what failed.
+const crashed = (kind) => (err) => {
+  require('./lib/crashNote').record(kind, err);
+  console.error(err);
+  process.exit(1);
+};
+process.on('uncaughtException', crashed('uncaughtException'));
+process.on('unhandledRejection', crashed('unhandledRejection'));
+
 require('express-async-errors');
 const express = require('express');
 const helmet = require('helmet');
@@ -18,7 +28,7 @@ if (!process.env.JWT_SECRET) {
   if (!fs.existsSync(secretFile)) fs.writeFileSync(secretFile, require('crypto').randomBytes(48).toString('hex'), { mode: 0o600 });
   process.env.JWT_SECRET = fs.readFileSync(secretFile, 'utf8').trim();
 }
-for (const key of ['APP_URL', 'VIASOCKET_ASK_WEBHOOK_URL', 'DIGEST_KEY']) {
+for (const key of ['APP_URL', 'VIASOCKET_ASK_WEBHOOK_URL', 'DIGEST_KEY', 'M91_SEND_LINK']) {
   if (!process.env[key]) console.warn(`Warning: ${key} is not set.`);
 }
 
@@ -41,7 +51,15 @@ app.use(
 app.use(cors({ origin: process.env.APP_URL || false }));
 app.use(express.json({ limit: '20kb' }));
 
-app.get('/healthz', (req, res) => res.json({ ok: true }));
+const alerts = require('./lib/alerts');
+
+app.get('/healthz', (req, res) => res.json({ ok: true })); // is the process alive? Hosts may use this to decide on restarts
+// For the outside watchdog (an M91 alert flow in viaSocket): can the app write its database, and is its scheduler still
+// running? A separate path so a database problem can never make a host restart the app. Says only ok or what is wrong.
+app.get('/healthz/deep', (req, res) => {
+  const problems = alerts.health();
+  res.set('Cache-Control', 'no-store').status(problems.length ? 503 : 200).json({ ok: !problems.length, problems });
+});
 app.use('/tasks', require('./routes/tasks'));
 app.use('/files', require('./routes/localFiles')); // proof files stored on this server (see lib/files.js)
 app.use('/api/auth', require('./routes/auth'));
@@ -69,9 +87,13 @@ if (fs.existsSync(dist)) {
 app.use((err, req, res, next) => {
   if (err && err.type === 'entity.too.large') return res.status(413).json({ error: 'That file is too large. The limit is 20 MB.' });
   console.error(err);
+  if (alerts.isStorageError(err)) alerts.bad('database-unwritable', { detail: err });
   res.status(500).json({ error: 'Something went wrong on our side.' });
 });
 
 require('./lib/store'); // opens the SQLite database and creates the tables
 const port = process.env.PORT || 5000;
-app.listen(port, '0.0.0.0', () => console.log(`Did it help? listening on ${port}`));
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Did it help? listening on ${port}`);
+  alerts.housekeeping(); // raises the alert for a crash that happened before this start, and retries anything M91 missed
+});

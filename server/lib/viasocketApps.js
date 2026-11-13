@@ -2,6 +2,7 @@
 // auth_id and script_id are credentials: they stay on the server and are only ever used for the person they belong to.
 const store = require('./store');
 const { getClient, scopeFor } = require('./viasocketClient');
+const alerts = require('./alerts');
 
 // The two apps featured at the top. Each person's test message goes only to themself.
 const FEATURED = {
@@ -92,16 +93,24 @@ async function tidyFlowTitle(userId, slug) {
 
 // No viaSocket call may hang a request or a timed job: each send gets a time limit and then reports a plain failure.
 const LIMIT_MS = Number(process.env.VIASOCKET_CALL_LIMIT_MS || 20000);
+// Tells the alerting what happened. Only a failed viaSocket call counts (reason 'failed'); a person who is not connected, an
+// unknown Slack name or an ambiguous one is that person's setup, not an outage. `who` lets it tell one person from several.
+const observe = (userId, r) => {
+  if (r && r.ok) alerts.ok('messages-failing');
+  else if (r && r.reason === 'failed') alerts.bad('messages-failing', { who: userId, detail: r.error });
+  return r;
+};
+
 const guarded = (label, fn) => async (...args) => {
   let timer;
   try {
-    return await Promise.race([
+    return observe(args[0], await Promise.race([
       fn(...args),
       new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`${label} did not answer in time. Please try again.`)), LIMIT_MS); }),
-    ]);
+    ]));
   } catch (err) {
     console.error(`viaSocket ${label} failed:`, String(err.message).slice(0, 120)); // never the message or addresses
-    return { ok: false, reason: 'failed', error: friendly(err) };
+    return observe(args[0], { ok: false, reason: 'failed', error: friendly(err) });
   } finally {
     clearTimeout(timer);
   }

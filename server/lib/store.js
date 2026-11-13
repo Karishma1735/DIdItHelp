@@ -77,6 +77,18 @@ CREATE TABLE IF NOT EXISTS blocks (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS blocks_user_day ON blocks(user_id, day);
+
+-- Alerting (M91): what is currently wrong, so a restart does not forget it, and when each background job last ran.
+CREATE TABLE IF NOT EXISTS alert_conditions (
+  key TEXT PRIMARY KEY,
+  failures INTEGER NOT NULL DEFAULT 0,
+  who TEXT NOT NULL DEFAULT '[]',
+  first_bad_at TEXT,
+  last_detail TEXT NOT NULL DEFAULT '',
+  open INTEGER NOT NULL DEFAULT 0,
+  opened_at TEXT
+);
+CREATE TABLE IF NOT EXISTS heartbeats (name TEXT PRIMARY KEY, at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS notices (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id),
@@ -423,6 +435,20 @@ const blocks = {
   remove: (id, userId) => db.prepare('DELETE FROM blocks WHERE id = ? AND user_id = ?').run(Number(id), Number(userId)).changes === 1,
 };
 
+// Alerting state (see lib/alerts.js). The row is the durable copy; the running process keeps its own in memory too.
+const conditions = {
+  all: () => db.prepare('SELECT * FROM alert_conditions').all(),
+  save: (c) =>
+    db.prepare(`INSERT INTO alert_conditions (key, failures, who, first_bad_at, last_detail, open, opened_at) VALUES (?,?,?,?,?,?,?)
+      ON CONFLICT(key) DO UPDATE SET failures = excluded.failures, who = excluded.who, first_bad_at = excluded.first_bad_at,
+        last_detail = excluded.last_detail, open = excluded.open, opened_at = excluded.opened_at`)
+      .run(c.key, c.failures, JSON.stringify(c.who), c.firstBadAt, c.detail, c.open ? 1 : 0, c.openedAt),
+};
+const heartbeats = {
+  touch: (name, at = now()) => db.prepare('INSERT INTO heartbeats (name, at) VALUES (?,?) ON CONFLICT(name) DO UPDATE SET at = excluded.at').run(name, at),
+  get: (name) => { const r = db.prepare('SELECT at FROM heartbeats WHERE name = ?').get(name); return r ? r.at : null; },
+};
+
 // "Already sent today" records, so a message is never sent twice for the same person, kind and day.
 const notices = {
   // Claim BEFORE sending. A claim that was never confirmed (a run that died mid-send) can be retaken after 10 minutes.
@@ -444,4 +470,4 @@ users.withoutPlanFor = (day) =>
      ORDER BY u.id`
   ).all(day).map(userOut);
 
-module.exports = { db, users, items, answers, tokens, share, invites, tx, removeDemoUser, vsConn, notices, blocks };
+module.exports = { db, users, items, answers, tokens, share, invites, tx, removeDemoUser, vsConn, notices, blocks, conditions, heartbeats };

@@ -4,6 +4,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const alerts = require('./alerts');
 
 const MAX_BYTES = 20 * 1024 * 1024; // Embarko's own per-file limit is higher; keep ours below it
 
@@ -63,8 +64,11 @@ const STORE_ERRORS = {
   invalid_filename: 'That file name isn’t allowed. Rename it and try again.',
 };
 
+// Errors that are about the file itself (too big, wrong type, bad name): the person's to fix, not a failing store.
+const ABOUT_THE_FILE = new Set(['file_too_large', 'file_type_not_allowed', 'invalid_filename']);
+
 // Stores the file and returns { url, id, storage }. Throws an Error with a plain message on failure.
-async function save(buffer, name) {
+async function saveOnce(buffer, name) {
   if (embarko()) {
     const res = await fetch(`${process.env.STORAGE_URL}/apps/${process.env.APP_NAME}/files/${encodeURIComponent(name)}`, {
       method: 'PUT',
@@ -74,7 +78,11 @@ async function save(buffer, name) {
     });
     let body = {};
     try { body = await res.json(); } catch { /* not JSON */ }
-    if (!res.ok || !body.url) throw new Error(STORE_ERRORS[body.error] || 'The file could not be stored. Please try again in a minute.');
+    if (!res.ok || !body.url) {
+      const err = new Error(STORE_ERRORS[body.error] || 'The file could not be stored. Please try again in a minute.');
+      err.aboutTheFile = ABOUT_THE_FILE.has(body.error);
+      throw err;
+    }
     return { url: body.url, id: String(body.id), storage: 'embarko' };
   }
   const id = crypto.randomBytes(16).toString('hex'); // 128 bits: unguessable
@@ -82,6 +90,18 @@ async function save(buffer, name) {
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, name), buffer);
   return { url: `${(process.env.APP_URL || '').replace(/\/+$/, '')}/files/${id}/${encodeURIComponent(name)}`, id, storage: 'local' };
+}
+
+// Watched: three failed saves in a row (a full or unreachable store) wake someone; the next good save clears it.
+async function save(buffer, name) {
+  try {
+    const stored = await saveOnce(buffer, name);
+    alerts.ok('file-storage-failing');
+    return stored;
+  } catch (err) {
+    if (!err.aboutTheFile) alerts.bad('file-storage-failing', { detail: err });
+    throw err;
+  }
 }
 
 // Removes a stored file (used when a delivery fails after the upload). Never throws.

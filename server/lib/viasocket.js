@@ -1,6 +1,7 @@
 // The only place the server talks to viaSocket. Never called from the browser.
 const { generateToken, hashToken } = require('./tokens');
 const store = require('./store');
+const alerts = require('./alerts');
 
 const appUrl = () => (process.env.APP_URL || 'http://localhost:5000').replace(/\/+$/, '');
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -75,10 +76,12 @@ async function postToViaSocket(payload, envName = 'VIASOCKET_ASK_WEBHOOK_URL') {
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
-    if (res.status >= 200 && res.status < 300) return { ok: true, channel: payload.channel };
+    if (res.status >= 200 && res.status < 300) { alerts.ok('messages-failing'); return { ok: true, channel: payload.channel }; }
+    alerts.bad('messages-failing', { who: `webhook:${envName}`, detail: `a viaSocket webhook answered with status ${res.status}` });
     return { ok: false, channel: payload.channel, error: `viaSocket answered with status ${res.status}.` };
   } catch (err) {
     const why = err.name === 'AbortError' ? 'timed out' : 'could not be reached';
+    alerts.bad('messages-failing', { who: `webhook:${envName}`, detail: `a viaSocket webhook ${why}` });
     return { ok: false, channel: payload.channel, error: `viaSocket ${why}.` };
   } finally {
     clearTimeout(timer);

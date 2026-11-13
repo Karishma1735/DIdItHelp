@@ -40,6 +40,37 @@ Every day is **8 hours for everyone** (`WORKDAY_MINUTES`, default 480). Hours ar
 
 How it is kept safe (`server/lib/planner.js`): the person's text goes to the AI as the *message*, never inside the instructions, and is cut at 4,000 characters; the AI has no tools; its answer must match a JSON schema and is then validated again (at most 12 tasks and 12 blocks, lengths cut, minutes 5–480 or an assumed hour when none is given, contacts must be an email or a Slack @name or are dropped with a question). A hung or failing AI gives a plain message and the manual form still works. Each request is a fresh AI thread and the person's words are never written to the logs. It uses viaSocket's built-in AI (`user.ai.send`), so there is no model key to manage.
 
+### Alerts: a real person is woken when something breaks (M91)
+
+When something breaks that a person has to fix, **M91** rings every phone in the "Did it help Ops" channel at full volume, through silent mode and Do Not Disturb. It repeats until someone answers, and the two buttons are **I'll handle it** (one person takes it and everyone else's phone stands down) and **Seen**. This is only for broken things that persist. It is never wired to a generic error handler, so one failed message does not wake anyone.
+
+**Who must set this up once (the people who will be woken):**
+1. Install M91 ([App Store](https://apps.apple.com/app/id6759090472) · [Google Play](https://play.google.com/store/apps/details?id=com.msg91.m91)) and sign in with your phone number.
+2. Whoever owns the channel adds your phone number to it. **You must accept the invite in the app**, or your phone stays silent while the alert still counts you as reached.
+3. In the app, fire **Send a test alert** from the channel once on your own phone, so you know it rings.
+
+**What wakes you** (`server/lib/alerts.js`; each alert closes itself when the problem is gone, and a new problem alerts again):
+
+| You are woken when | Severity | It closes when |
+| --- | --- | --- |
+| The 5-minute scheduler fails 3 runs in a row, or runs out of time 3 times in a row. Nobody is reminded until it works | HIGH | the next good run |
+| viaSocket sends fail 5 in a row **for at least 2 different people** (morning prompts, reminders, questions to receivers, manager reports). One person's expired Gmail or bad address is not counted | HIGH | the next successful send |
+| The database cannot be written 3 times in a row (disk full or read-only) | HIGH | the next scheduler run that can write |
+| Proof files cannot be saved 3 times in a row (the file store is full or unreachable). People can still paste a link | MEDIUM | the next successful upload |
+| The app crashed and restarted (reported on the next start, from a note left in the data folder, because the database may be what broke) | MEDIUM | after an hour of running fine |
+| The app is down, its database cannot be written, or its scheduler has not run for 20 minutes (the outside watchdog below) | HIGH | the next healthy check |
+
+HIGH only phones people if the whole channel has gone quiet for 3 minutes; MEDIUM never phones. Nothing here is `CRITICAL` (money or safety draining), so the phone keeps its meaning. Not alerted on: validation errors, one person's disconnected Slack or Gmail (their desk says so), the AI planner being down (the manual form works).
+
+**Setup.** Set `M91_SEND_LINK` to the channel's "Send alert link" (channel → paper-plane icon → copy). It is a credential, so it goes in the environment only (the gitignored `.env`, and an Embarko environment variable), never in source and never in a log. Without it the app runs exactly as before and nobody is woken. To check a link without waking anyone, a plain `GET` of it names the channel (a link with `?title=…` on the end *raises* an alert, so the app strips that).
+
+**Good to know.**
+- A `2xx` from M91 means "accepted", not "rang". The app logs `reached N phones`, and a warning if it reached nobody (everyone in the channel must accept the invite).
+- The state of each problem (how many failures in a row, whether its alert is open) is kept in the database, so a restart does not forget it. If M91 is unreachable when an alert should go out, it is retried on every scheduler tick.
+- Revoking the link in the M91 app turns every alert off at once (`401`, logged once per attempt). Use a separate link for the outside watchdog if you want to be able to cut one off alone.
+- `GET /healthz` stays a plain "is it alive" check. `GET /healthz/deep` is for the outside watchdog: `200 {"ok":true}`, or `503` naming `database` or `scheduler`. It never shows secrets, and it does at most one database write every 30 seconds however often it is fetched.
+- The **outside watchdog** is a viaSocket flow (Schedule every 5 minutes → fetch `/healthz/deep` → on a non-200 use the M91 app's **Send Channel Alert** with the customId `app-down`, severity HIGH, buttons `I'll handle it` and `Seen` → on a 200 use **Close Channel Alert** for `app-down`). It is the only thing that can notice the whole app being down, because a dead app cannot alert about itself. If the app crash-loops before it can start, the watchdog is what wakes you.
+
 ### Proof: a link or an uploaded file
 
 When marking something delivered, the proof is **a link** (PR, live flow, doc) **or an uploaded file**. Allowed: png, jpg, jpeg, gif, webp, pdf, txt, md, csv, zip, mp4, webm, up to 20 MB (the app checks that the file really is what its extension says; html, svg, scripts and executables are refused; for Word or Excel use a zip or a link). The file is stored once and the receiver, the manager and the AI all just see its link:
@@ -132,6 +163,8 @@ For local use, `APP_URL=http://localhost:5173` makes the links in messages open 
 | `APP_TIMEZONE` | Optional. Decides what "today" and the Monday–Sunday week mean (default `UTC`) |
 | `WORKDAY_MINUTES` | Optional. Length of the working day in minutes (default `480`, which is 8 hours) |
 | `VIASOCKET_AI_TIMEOUT_MS` | Optional. How long the day planner waits for the AI (default `45000`) |
+| `M91_SEND_LINK` | Optional but recommended. The M91 channel's send link: wakes a real person when something breaks. A credential: environment only |
+| `SCHEDULER_STALE_MINUTES` | Optional. How many minutes without a scheduler run before `/healthz/deep` reports the scheduler as stopped (default `20`; it runs every 5) |
 
 ## Deploy on Embarko (one service)
 
